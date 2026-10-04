@@ -435,6 +435,39 @@
   .sfsum-chat{max-height:380px; min-height:90px; overflow:auto; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px;}
   .sfsum-msg{padding:8px 11px; border-radius:10px; font-size:13px; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-width:92%;}
   .sfsum-msg.user{align-self:flex-end; background:#2a2560; color:#e9e6ff;} .sfsum-msg.bot{align-self:flex-start; background:#171b33; border:1px solid var(--panel-border);}
+
+  .sfsum-wide{flex:1 1 100%;} .sfsum-wide input{width:100%; max-width:none; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;}
+  .sfsum-chapinfo{margin:6px 0 8px; font-size:12.5px; color:var(--text-dim);} .sfsum-chapinfo.warn{color:var(--amber); background:rgba(224,168,62,.08); border:1px solid rgba(224,168,62,.35); border-radius:10px; padding:8px 10px;}
+  /* ---- Story Viewer ---- */
+  .sfv{margin:10px 0 12px;} .sfv-shell{background:var(--input-bg); border:1px solid var(--panel-border); border-radius:14px; padding:12px; overflow:hidden;}
+  .sfv-head{display:flex; align-items:flex-start; gap:6px; margin-bottom:10px;} .sfv-headtxt{flex:1; min-width:0;}
+  .sfv-title{font-size:16px; font-weight:700; letter-spacing:.2px;} .sfv-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .sfv-x{background:transparent; border:1px solid var(--panel-border); color:var(--text-dim); border-radius:9px; width:34px; height:34px; font-size:15px; cursor:pointer;}
+  .sfv-search{width:100%; box-sizing:border-box; background:#0a0c18; border:1px solid var(--panel-border); color:var(--text); border-radius:10px; padding:9px 12px; font-size:14px; margin-bottom:10px;}
+  .sfv-chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px;} .sfv-bar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;} .sfv-bar .sfv-chips{margin:0;}
+  .sfv-chip{background:#151831; border:1px solid var(--panel-border); color:var(--text); border-radius:999px; padding:5px 12px; font-size:12.5px; cursor:pointer;}
+  .sfv-chip.on{background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; color:#fff; font-weight:600;}
+  .sfv-hint{font-size:12px; color:var(--text-dim); margin:6px 0; line-height:1.5;} .sfv-empty{padding:26px 8px; text-align:center; color:var(--text-dim); font-size:13px;}
+  .sfv-cards{display:flex; flex-direction:column; gap:9px;} .sfv-card{background:#12152b; border:1px solid var(--panel-border); border-radius:12px; padding:11px 12px;}
+  .sfv-cardtop{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;} .sfv-cardname{flex:1; min-width:0;}
+  .sfv-av{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:17px; color:#fff; flex:none;}
+  .sfv-name{font-size:15px; font-weight:700; line-height:1.25; word-break:break-word;} .sfv-meta{font-size:12px; color:var(--text-dim); line-height:1.45;}
+  .sfv-badge{display:inline-block; font-size:11px; font-weight:600; border:1px solid var(--panel-border); color:var(--text-dim); border-radius:999px; padding:2px 9px; white-space:nowrap;}
+  .sfv-alias{display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 2px;} .sfv-alias span{font-size:11px; background:#1a1e3b; color:#b9bde0; border-radius:6px; padding:2px 7px;}
+  .sfv-ident{font-size:13px; line-height:1.55; margin-top:6px; color:#d7daf0; cursor:pointer;} .sfv-ident.clamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+  .sfv-link{margin-top:8px; background:#1a1e3b; border:1px solid var(--panel-border); color:#9ec2ff; border-radius:9px; padding:6px 12px; font-size:12.5px; cursor:pointer;}
+  .sfv-more{display:block; width:100%; margin-top:10px; background:#151831; border:1px solid var(--panel-border); color:var(--text); border-radius:10px; padding:10px; font-size:13px; cursor:pointer;}
+  .sfv-text{font-size:13.5px; line-height:1.55;} .sfv-cons{font-size:12.5px; color:#a8e6c8; margin-top:5px; line-height:1.5;}
+  .sfv-legend{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px;} .sfv-leg{display:flex; align-items:center; gap:6px; background:#151831; border:1px solid var(--panel-border); color:var(--text); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer;}
+  .sfv-leg i,.sfv-grp i{display:inline-block; width:10px; height:10px; border-radius:50%;} .sfv-leg.off{opacity:.38; text-decoration:line-through;}
+  .sfv-graphbox{position:relative;} .sfv-graph{overflow:auto; border:1px solid var(--panel-border); border-radius:12px; background:radial-gradient(circle at 50% 45%,#161a36 0%,#0a0c18 75%); max-height:560px; -webkit-overflow-scrolling:touch;}
+  .sfv-svg{display:block; min-width:100%; height:auto; touch-action:pan-x pan-y;} .sfv-lbl{fill:#e8eaff; paint-order:stroke; stroke:#0a0c18; stroke-width:3.2px; stroke-linejoin:round;}
+  .sfv-node:hover circle:first-child{stroke-width:3;} .sfv-zoom{position:absolute; right:8px; top:8px; display:flex; flex-direction:column; gap:6px;}
+  .sfv-zoom button{width:32px; height:32px; border-radius:9px; background:rgba(21,24,49,.92); border:1px solid var(--panel-border); color:var(--text); font-size:16px; cursor:pointer;}
+  .sfv-detail{margin-top:12px;} .sfv-grp{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; margin:14px 0 7px; color:#dfe2ff;}
+  .sfv-row{background:#12152b; border:1px solid var(--panel-border); border-left:4px solid var(--accent); border-radius:10px; padding:9px 11px; margin-bottom:7px;}
+  .sfv-rowtop{display:flex; align-items:center; justify-content:space-between; gap:8px;} .sfv-who{background:none; border:none; color:#9ec2ff; font-size:14px; font-weight:700; padding:0; text-align:left; cursor:pointer; word-break:break-word;}
+  .sfv-rels{margin-top:5px; font-size:12.5px; color:#c9cde8; line-height:1.55;} .sfv-rels div{word-break:break-word;}
   .sfsum-par{margin:8px 0 10px; padding:9px 11px; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:10px; font-size:12.5px;}
   .sfsum-parhead{font-weight:600; margin-bottom:6px;} .sfsum-parhead span{font-weight:400; color:var(--text-dim);}
   .sfsum-parstats{display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--text-dim); margin-bottom:6px;} .sfsum-parstats b{color:var(--text);}
@@ -917,6 +950,7 @@
         <label>Ký tự / batch <input type="number" id="sfSumBatchChars" min="3000" max="200000" step="1000" value="20000"></label>
         <label>Nén Memory mỗi <input type="number" id="sfSumCompressEvery" min="1" max="1000" value="10"> batch</label>
         <label>Context Memory (ký tự) <input type="number" id="sfSumCtxChars" min="3000" max="60000" step="1000" value="14000"></label>
+        <label class="sfsum-wide" title="Tuỳ chọn. Chỉ dùng khi tiêu đề chương trong file không được nhận ra tự động. Regex, không phân biệt hoa/thường; nhóm bắt (…) đầu tiên là số chương. Mỗi mẫu tạo một phiên đọc riêng.">Mẫu tiêu đề chương (regex, tuỳ chọn) <input type="text" id="sfSumChapRe" placeholder="vd: ^\s*Chương\s+(\d+)" autocomplete="off" spellcheck="false"></label>
         <label title="Trần số request summary chạy đồng thời. Thực tế = min(số key khả dụng, giá trị này, số key còn RPM)">Parallel Summary <input type="number" id="sfSumParallel" min="1" max="20" step="1" value="7"></label>
       </div>
       <div class="btn-row">
@@ -926,6 +960,7 @@
         <button class="btn small" id="sfSumExportBtn" disabled>⬇ Xuất Story Memory</button>
       </div>
       <div class="sfsum-info" id="sfSumInfo"></div>
+      <div class="sfsum-chapinfo" id="sfSumChapInfo" style="display:none;"></div>
       <div class="sfsum-bar"><div id="sfSumBarFill"></div></div>
       <div class="sfsum-stats" id="sfSumStats"></div>
       <div class="sfsum-par" id="sfSumPar" style="display:none;"></div>
@@ -941,6 +976,7 @@
         <button class="btn small" id="sfSumModeTimeline">🕰 Timeline</button>
         <button class="btn small" id="sfSumModeRel">🔗 Quan hệ</button>
       </div>
+      <div class="sfv" id="sfSumViewer" style="display:none;"></div>
       <div class="sfsum-chat" id="sfSumChatBox"></div>
       <div class="sfsum-inputrow">
         <textarea id="sfSumInput" rows="2" placeholder="Hỏi về truyện… (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
@@ -7086,14 +7122,43 @@ function cnToNum(s) {
   }
   return total + sec + num;
 }
-function sfSumParseChapters(text) {
+/* Parser v2 (tolerant): chấp nhận trang trí markdown/ngoặc ở đầu dòng (#, **, 【】, [ ], “), "Chương/Hồi/Chapter", số Ả Rập,
+   số viết bằng chữ tiếng Việt ("Chương Mười Hai"), số La Mã, "第N章". Job cũ (không có params.parser) vẫn dùng v1 để resume không đổi plan. */
+var CH_RE2 = new RegExp('^[ \\t\\u3000#*_>~=\\-\\u2013\\u2014\\u2022\\u00b7\\[\\]\\u3010\\u3011\\u3014\\u3015\\u300a\\u300b\\u300c\\u300d\\u300e\\u300f"\\u201c\\u201d\'()\\uff08\\uff09]*(?:' +
+  '\\u7b2c\\s*([0-9\\uff10-\\uff19\\u96f6\\u3007\\u4e00\\u4e8c\\u4e24\\u4e09\\u56db\\u4e94\\u516d\\u4e03\\u516b\\u4e5d\\u5341\\u767e\\u5343\\u4e07]+)\\s*[\\u7ae0\\u56de\\u7bc0\\u8282]' +
+  '|(?:Ch\\u01b0\\u01a1ng|Chuong|H\\u1ed3i)\\s+th\\u1ee9\\s+(nh\\u1ea5t)(?![\\p{L}])' +
+  '|(?:Ch\\u01b0\\u01a1ng|Chuong|Chapter|H\\u1ed3i|Ch\\.)\\s*(?:th\\u1ee9\\s*)?[:\\uff1a.#\\-]*\\s*0*(\\d+)(?!\\d)' +
+  '|(?:Ch\\u01b0\\u01a1ng|H\\u1ed3i)\\s+(?:th\\u1ee9\\s+)?((?:(?:kh\\u00f4ng|l\\u1ebb|linh|m\\u1ed9t|m\\u1ed1t|hai|ba|b\\u1ed1n|t\\u01b0|n\\u0103m|l\\u0103m|s\\u00e1u|b\\u1ea3y|b\\u1ea9y|t\\u00e1m|ch\\u00edn|m\\u01b0\\u1eddi|m\\u01b0\\u01a1i|tr\\u0103m|ngh\\u00ecn|ng\\u00e0n)(?:\\s+|$|(?=[:.\\-\\u2013\\u2014,])))+)' +
+  '|(?:Ch\\u01b0\\u01a1ng|Chapter)\\s+([IVXLC]{1,6})(?![\\p{L}\\d]))', 'iu');
+function viNum(str) {
+  var U = { 'không': 0, 'một': 1, 'mốt': 1, 'nhất': 1, 'hai': 2, 'ba': 3, 'bốn': 4, 'tư': 4, 'năm': 5, 'lăm': 5, 'sáu': 6, 'bảy': 7, 'bẩy': 7, 'tám': 8, 'chín': 9 };
+  var ws = String(str).toLowerCase().replace(/[:.\-–—,]/g, ' ').split(/\s+/).filter(Boolean), th = 0, hu = 0, rest = 0, last = 0, any = false;
+  for (var i = 0; i < ws.length; i++) {
+    var w = ws[i];
+    if (w in U) { last = U[w]; any = true; }
+    else if (w === 'mười') { rest += 10; last = 0; any = true; }
+    else if (w === 'mươi') { rest += (last || 1) * 10; last = 0; any = true; }
+    else if (w === 'trăm') { hu += (last || 1) * 100; last = 0; any = true; }
+    else if (w === 'nghìn' || w === 'ngàn') { th += ((last + rest + hu) || 1) * 1000; hu = rest = last = 0; any = true; }
+    else if (w === 'linh' || w === 'lẻ') { /* bỏ qua */ }
+    else return NaN;
+  }
+  return any ? th + hu + rest + last : NaN;
+}
+function romanNum(r) { var v = { I: 1, V: 5, X: 10, L: 50, C: 100 }, t = 0; r = r.toUpperCase(); for (var i = 0; i < r.length; i++) { var a = v[r[i]], b = v[r[i + 1]] || 0; t += a < b ? -a : a; } return t; }
+function sfSumParseChapters(text, opt) {
+  opt = opt || {}; var custom = null, ver = opt.parser === 2 ? 2 : 1;
+  if (opt.chapterRe) { try { custom = new RegExp(opt.chapterRe, 'i'); } catch (e) { custom = null; } }
   var heads = [], len = text.length, pos = 0;
   while (pos < len) {
     var nl = text.indexOf('\n', pos); if (nl === -1) nl = len;
     if (nl - pos <= 200) {
-      var line = text.slice(pos, nl), m = CH_RE.exec(line);
+      var line = text.slice(pos, nl), m = custom ? custom.exec(line) : (ver === 2 ? CH_RE2 : CH_RE).exec(line);
       if (m) {
-        var no = m[1] ? cnToNum(m[1]) : m[2] ? 1 : m[3] ? parseInt(m[3], 10) : m[4] ? parseInt(m[4], 10) : parseInt(m[5], 10);
+        var no;
+        if (custom) { no = NaN; for (var q = 1; q < m.length; q++) if (m[q] && /^\d+$/.test(m[q])) { no = parseInt(m[q], 10); break; } if (!Number.isFinite(no)) no = heads.length + 1; }
+        else if (ver === 2) no = m[1] ? cnToNum(m[1]) : m[2] ? 1 : m[3] ? parseInt(m[3], 10) : m[4] ? viNum(m[4]) : romanNum(m[5]);
+        else no = m[1] ? cnToNum(m[1]) : m[2] ? 1 : m[3] ? parseInt(m[3], 10) : m[4] ? parseInt(m[4], 10) : parseInt(m[5], 10);
         if (Number.isFinite(no)) heads.push({ no: no, title: line.trim().slice(0, 120), start: pos });
       }
     }
@@ -7162,8 +7227,8 @@ function sfSummaryChunker(text, chapters, maxChars) {
   batches.forEach(function (b) { b.totalBatches = batches.length; });
   return batches;
 }
-function sfSumPlan(text, batchChars) {
-  var p = sfSumParseChapters(text), chapters = p.chapters, mode = p.mode;
+function sfSumPlan(text, batchChars, popt) {
+  var p = sfSumParseChapters(text, popt), chapters = p.chapters, mode = p.mode;
   if (!chapters.length && text.length) {
     chapters = sfSumSplitRange(text, 0, text.length, batchChars).map(function (r, i) {
       return { idx: i, no: i + 1, title: 'Phần ' + (i + 1), start: r[0], end: r[1], virtual: true };
@@ -7171,7 +7236,11 @@ function sfSumPlan(text, batchChars) {
     mode = 'virtual';
   }
   var batches = sfSummaryChunker(text, chapters, batchChars);
-  return { chapters: chapters, batches: batches, mode: mode, batchChars: batchChars, textLength: text.length };
+  var maxCh = 0; chapters.forEach(function (c) { if (c.end - c.start > maxCh) maxCh = c.end - c.start; });
+  var diag = { chapters: chapters.length, maxChars: maxCh, parser: (popt && popt.parser) || 1, chapterRe: (popt && popt.chapterRe) || '', suspicious: false, reason: '' };
+  if (mode === 'virtual' && text.length > batchChars * 8) { diag.suspicious = true; diag.reason = 'Không thấy tiêu đề chương nào — file bị chia theo độ dài, số “chương” trong Memory sẽ chỉ là số phần.'; }
+  else if (mode === 'headers' && (maxCh > Math.max(batchChars * 10, 150000) || (chapters.length <= 3 && text.length > batchChars * 8))) { diag.suspicious = true; diag.reason = 'Chỉ nhận ra ' + chapters.length + ' chương trong ' + text.length.toLocaleString('vi-VN') + ' ký tự (chương dài nhất ' + maxCh.toLocaleString('vi-VN') + ' ký tự). Rất có thể tiêu đề các chương còn lại có định dạng chưa được nhận ra.'; }
+  return { chapters: chapters, batches: batches, mode: mode, batchChars: batchChars, textLength: text.length, diag: diag };
 }
 function sfSumBatchText(text, b) { return text.slice(b.startOffset, b.endOffset); }
 function sfSumVerifyCoverage(plan, textLen) { // chứng minh: các batch phủ liên tục 0 → END, không sót, không chồng
@@ -7690,8 +7759,16 @@ async function oneRequest(prompt, k, outerSignal) {
       if (outerSignal && outerSignal.aborted) { var ab2 = new Error('Đã huỷ'); ab2.aborted = true; throw ab2; }
       var e2 = new Error('Lỗi đọc phản hồi'); e2.status = timedOut ? 408 : 0; throw e2;
     }
-    var ch = data && data.choices && data.choices[0], content = ch && ((ch.message && ch.message.content) || ch.text) || '';
-    if (!content) { var e3 = new Error('Phản hồi rỗng'); e3.status = 0; throw e3; }
+    var ch = data && data.choices && data.choices[0], msg = ch && ch.message, content = '';
+    if (msg) { // content có thể là string hoặc mảng các phần {type:'text', text:'…'} (một số proxy/model trả kiểu này)
+      if (typeof msg.content === 'string') content = msg.content;
+      else if (Array.isArray(msg.content)) content = msg.content.map(function (x) { return typeof x === 'string' ? x : (x && (x.text || x.content) || ''); }).join('');
+    }
+    if (!content && ch && typeof ch.text === 'string') content = ch.text;
+    if (!String(content).trim()) {
+      var fin = ch && ch.finish_reason || '', e3 = new Error('Phản hồi rỗng' + (fin ? ' (finish_reason=' + fin + (/filter|safety|content/i.test(fin) ? ' — bị bộ lọc nội dung của model chặn' : fin === 'length' ? ' — model dùng hết token để suy nghĩ' : '') + ')' : ''));
+      e3.status = 0; e3.empty = true; e3.finish = fin; throw e3;
+    }
     meta.success++;
     return { content: String(content).trim(), finish: ch.finish_reason || '' };
   } finally {
@@ -7744,12 +7821,13 @@ function reqEnd(e, status) { e.finishedAt = Date.now(); e.status = status; S.par
 
 // rec (tuỳ chọn) = { batch, keyIndex, attempt, avoid } của worker pool. Không có rec => hành vi cũ (tuần tự, dùng cho chatbot/compile).
 async function callAI(prompt, signal, rec) {
-  var attempt = 0, rate = 0, last = null;
+  var attempt = 0, rate = 0, last = null, avoidLocal = -1, emptyN = 0;
   if (typeof root.ensureKeyMeta === 'function') root.ensureKeyMeta();
   while (true) {
     if (signal && signal.aborted) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; }
     var k = root.pickAvailableKey();
-    if (k !== -1 && rec && rec.avoid === k) { var alt = pickOtherKey(k); if (alt !== -1) k = alt; } // retry ưu tiên key KHÁC key vừa lỗi
+    var av = rec ? rec.avoid : avoidLocal;
+    if (k !== -1 && av === k) { var alt = pickOtherKey(k); if (alt !== -1) k = alt; } // retry ưu tiên key KHÁC key vừa lỗi
     if (k === -1) {
       if (!usable()) { var ef = new Error('Không còn API key khả dụng (401/403 hoặc đã tắt).'); ef.fatal = true; throw ef; }
       var w = Math.min(typeof root.getNearestCooldownMs === 'function' ? root.getNearestCooldownMs() : 3000, 120000);
@@ -7763,8 +7841,12 @@ async function callAI(prompt, signal, rec) {
     catch (e) {
       if (ev) reqEnd(ev, e.aborted ? 'abort' : (e.status || 'err'));
       if (e.aborted) throw e;
-      if (rec) rec.avoid = k;
+      if (rec) rec.avoid = k; avoidLocal = k;
       last = e; meta.errors = (meta.errors || 0) + 1;
+      if (e.empty) { // 200 OK nhưng nội dung rỗng: lặp lại y nguyên prompt hiếm khi giúp -> thử tối đa 2 lần (key khác), rồi trả lỗi để tầng trên đổi cách (chia nhỏ prompt)
+        if (++emptyN >= 2) { e.final = true; throw e; }
+        log(e.message + ' (key C' + (k + 1) + ') — thử lại 1 lần bằng key khác', 'warn'); continue;
+      }
       if (e.status === 429) {
         meta.c429 = (meta.c429 || 0) + 1; meta.status = 'ratelimited';
         meta.rateLimitUntil = Date.now() + (e.retryAfter ? e.retryAfter * 1000 : Math.min(120000, 15000 * Math.min(4, ++rate)));
@@ -8011,9 +8093,12 @@ async function sfSumRun(opts) {
 async function sfSumPrepare(text, opts) {
   opts = opts || {};
   S.text = text; S.hash = hashOf(text);
-  var id = 'job_' + S.hash, existing = await storeObj().getJob(id);
+  var cre = opts.chapterRe ? String(opts.chapterRe).trim() : '';
+  var id = 'job_' + S.hash + (cre ? '_c' + fnv(cre) : ''), existing = await storeObj().getJob(id);
   var bc = existing && existing.params && existing.params.batchChars ? existing.params.batchChars : (opts.batchChars || S.cfg.batchChars);
-  S.plan = sfSumPlan(text, bc);
+  // job cũ chưa lưu params.parser => v1 (giữ nguyên plan để resume); job mới => v2 (nhận diện chương tốt hơn)
+  var parserVer = existing ? ((existing.params && existing.params.parser) || 1) : 2;
+  S.plan = sfSumPlan(text, bc, { parser: parserVer, chapterRe: cre });
   S.sums = new Map();
   if (existing && existing.sourceHash === S.hash && existing.storyMemory && existing.totalBatches === S.plan.batches.length) {
     S.job = existing; S.mem = indexMemory(existing.storyMemory);
@@ -8028,7 +8113,7 @@ async function sfSumPrepare(text, opts) {
   }
   S.mem = newMemory(); S.par = newPar();
   S.job = { id: id, fileId: CUR_FILE_ID(), sourceHash: S.hash, status: 'ready',
-    currentBatch: 0, totalBatches: S.plan.batches.length, processedChapters: 0, params: { batchChars: bc }, storyMemory: S.mem, results: {}, keyStats: {},
+    currentBatch: 0, totalBatches: S.plan.batches.length, processedChapters: 0, params: { batchChars: bc, parser: parserVer, chapterRe: cre }, storyMemory: S.mem, results: {}, keyStats: {},
     startedAt: Date.now(), updatedAt: Date.now(), lastError: '', warnings: [] };
   return { resumed: false, job: S.job };
 }
@@ -8048,6 +8133,15 @@ function sfSumIntent(q) {
 function chapterNos() { return S.plan.chapters.map(function (c) { return c.no; }); }
 async function callText(prompt) { var r = await callAI(prompt, (S.ac || (S.ac = new AbortController())).signal); return r.content; }
 
+async function mapPool(arr, limit, fn) { // chạy fn(item, index) với tối đa `limit` việc đồng thời, kết quả theo đúng index
+  var res = new Array(arr.length), next = 0, err = null, ws = [];
+  for (var w = 0; w < Math.max(1, Math.min(limit, arr.length)); w++) ws.push((async function () {
+    while (next < arr.length && !err) { var k = next++; try { res[k] = await fn(arr[k], k); } catch (e) { err = err || e; } }
+  })());
+  await Promise.all(ws); if (err) throw err; return res;
+}
+function totalLen(a) { var n = 0; a.forEach(function (x) { n += x.text.length; }); return n; }
+
 async function sfSumCompile(startNo, endNo, focus, onStep) {
   var m = S.mem, items = [];
   S.plan.chapters.forEach(function (c) { if (c.no >= startNo && c.no <= endNo && S.sums.has(c.idx)) items.push({ no: c.no, text: S.sums.get(c.idx) }); });
@@ -8056,24 +8150,41 @@ async function sfSumCompile(startNo, endNo, focus, onStep) {
   var cur = items.map(function (x) { return { label: 'Chương ' + x.no, from: x.no, to: x.no, text: x.text }; });
   var foc = focus || 'diễn biến toàn bộ';
   var digest = function (txt) { return sfSumBuildContext(m, txt, Math.floor(budget * 0.5)); };
+  function buildPrompt(grp, final) {
+    var body = grp.map(function (x) { return '[' + x.label + '] ' + x.text; }).join('\n');
+    return 'Dựa HOÀN TOÀN vào dữ liệu dưới đây (STORY MEMORY liên quan + tóm tắt từng chương/đoạn), viết ' + (final ? 'BẢN TÓM TẮT HOÀN CHỈNH' : 'một đoạn tóm tắt mạch lạc') + ' về ' + foc +
+      ' của chương ' + grp[0].from + ' đến ' + grp[grp.length - 1].to + '.\nYÊU CẦU: theo đúng diễn biến thời gian xuất bản; giữ nguyên tên nhân vật/cảnh giới/địa danh như nguồn; giữ nguyên nhân → kết quả và các bước ngoặt lớn; ' +
+      'KHÔNG bịa, KHÔNG làm sai quan hệ nhân vật, KHÔNG chỉ ghép nối từng chương một cách máy móc; nêu số chương ở các mốc quan trọng; nếu có mục uncertain/needsCheck thì nói rõ là chưa chắc.' +
+      (final ? ' Kết thúc bằng 1-2 câu về trạng thái hiện tại và các việc chưa giải quyết.' : '') + '\n\n[STORY MEMORY LIÊN QUAN]\n' + (final ? sfSumBuildContext(m, body, budget) : digest(body)) + '\n\n[DỮ LIỆU]\n' + body;
+  }
+  // Nếu model trả rỗng (bộ lọc nội dung / hết token suy nghĩ): chia đôi nhóm, tóm riêng rồi ghép; còn 1 mục thì dùng nguyên tóm tắt chương đó. KHÔNG bao giờ để cả tác vụ chết vì 1 phản hồi rỗng.
+  async function summGroup(grp, final) {
+    try { return await callText(buildPrompt(grp, final)); }
+    catch (e) {
+      if (!e.empty || e.aborted) throw e;
+      if (grp.length <= 1) { log('Model trả rỗng cho ' + grp[0].label + ' — dùng nguyên tóm tắt chương này', 'warn'); return grp[0].text; }
+      log('Model trả rỗng cho ' + grp[0].label + '…' + grp[grp.length - 1].label + ' — chia nhỏ ' + grp.length + ' mục để tóm lại', 'warn');
+      var mid = grp.length >> 1, mk = function (g) { return { label: g[0].label + (g.length > 1 ? '–' + g[g.length - 1].label.replace('Chương ', '') : ''), from: g[0].from, to: g[g.length - 1].to, text: '' }; };
+      var A = await summGroup(grp.slice(0, mid), false), B = await summGroup(grp.slice(mid), false);
+      return A + '\n\n' + B;
+    }
+  }
   while (true) {
     var groups = [], g0 = [], size = 0;
     cur.forEach(function (x) { var l = x.text.length + x.label.length + 4; if (g0.length && size + l > budget) { groups.push(g0); g0 = []; size = 0; } g0.push(x); size += l; });
     if (g0.length) groups.push(g0);
-    var final = groups.length === 1;
-    var next = [];
-    for (var gi = 0; gi < groups.length; gi++) {
+    var final = groups.length === 1, doneN = 0;
+    // các nhóm CÙNG cấp độc lập nhau -> chạy song song bằng Key Pool (kết quả giữ đúng thứ tự nhóm)
+    var next = await mapPool(groups, final ? 1 : effectiveConcurrency(), async function (grp, gi) {
       if (S.stop) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; }
-      var body = groups[gi].map(function (x) { return '[' + x.label + '] ' + x.text; }).join('\n');
-      var prompt = 'Dựa HOÀN TOÀN vào dữ liệu dưới đây (STORY MEMORY liên quan + tóm tắt từng chương/đoạn), viết ' + (final ? 'BẢN TÓM TẮT HOÀN CHỈNH' : 'một đoạn tóm tắt mạch lạc') + ' về ' + foc +
-        ' của chương ' + groups[gi][0].from + ' đến ' + groups[gi][groups[gi].length - 1].to + '.\nYÊU CẦU: theo đúng diễn biến thời gian xuất bản; giữ nguyên tên nhân vật/cảnh giới/địa danh như nguồn; giữ nguyên nhân → kết quả và các bước ngoặt lớn; ' +
-        'KHÔNG bịa, KHÔNG làm sai quan hệ nhân vật, KHÔNG chỉ ghép nối từng chương một cách máy móc; nêu số chương ở các mốc quan trọng; nếu có mục uncertain/needsCheck thì nói rõ là chưa chắc.' +
-        (final ? ' Kết thúc bằng 1-2 câu về trạng thái hiện tại và các việc chưa giải quyết.' : '') + '\n\n[STORY MEMORY LIÊN QUAN]\n' + (final ? sfSumBuildContext(m, body, budget) : digest(body)) + '\n\n[DỮ LIỆU]\n' + body;
-      if (onStep) onStep({ level: level + 1, done: gi, total: groups.length });
-      var out = await callText(prompt);
-      next.push({ label: 'Chương ' + groups[gi][0].from + '–' + groups[gi][groups[gi].length - 1].to, from: groups[gi][0].from, to: groups[gi][groups[gi].length - 1].to, text: out });
-    }
+      if (onStep) onStep({ level: level + 1, done: doneN, total: groups.length });
+      var out = await summGroup(grp, final);
+      doneN++; if (onStep) onStep({ level: level + 1, done: Math.min(doneN, groups.length - 1), total: groups.length });
+      return { label: 'Chương ' + grp[0].from + '–' + grp[grp.length - 1].to, from: grp[0].from, to: grp[grp.length - 1].to, text: out };
+    });
     if (final) return next[0].text;
+    // chống vòng lặp vô hạn nếu mức tóm tắt không co lại (vd. nhiều lần fallback)
+    if (level >= 1 && totalLen(next) >= totalLen(cur) * 0.95) { log('Tóm tắt cấp ' + (level + 1) + ' không co lại — ghép trực tiếp các đoạn', 'warn'); return next.map(function (x) { return '【' + x.label + '】\n' + x.text; }).join('\n\n'); }
     cur = next; level++;
   }
 }
@@ -8134,12 +8245,12 @@ function sfSumLocalView(kind, page, size) {
 }
 
 /* ------------------------- 12. EXPORT API ------------------------- */
-var api = { CFG_DEFAULT: CFG_DEFAULT, S: S, norm: norm, sfSumParseChapters: sfSumParseChapters, sfSumSplitRange: sfSumSplitRange, sfSummaryChunker: sfSummaryChunker,
+var api = { CFG_DEFAULT: CFG_DEFAULT, S: S, norm: norm, sfSumSplitRange: sfSumSplitRange, sfSummaryChunker: sfSummaryChunker,
   sfSumPlan: sfSumPlan, sfSumBatchText: sfSumBatchText, sfSumVerifyCoverage: sfSumVerifyCoverage, newMemory: newMemory, indexMemory: indexMemory,
   sfSumMergeDelta: sfSumMergeDelta, sfSumCompress: sfSumCompress, sfSumBuildContext: sfSumBuildContext, sfSumParseJSON: sfSumParseJSON,
   sfSumPrepare: sfSumPrepare, sfSumRun: sfSumRun, sfSumReset: sfSumReset, sfSumAsk: sfSumAsk, sfSumCompile: sfSumCompile, sfSumParseRange: sfSumParseRange,
   sfSumIntent: sfSumIntent, sfSumLocalView: sfSumLocalView, makeMemStore: makeMemStore, makeIdbStore: makeIdbStore, snapshot: snapshot, counts: counts,
-  effectiveConcurrency: effectiveConcurrency, keyAvailCount: keyAvailCount, runPool: runPool,
+  effectiveConcurrency: effectiveConcurrency, keyAvailCount: keyAvailCount, runPool: runPool, sfSumParseChapters: sfSumParseChapters, viNum: viNum,
   stop: function () { S.stop = true; if (S.ac) S.ac.abort(); } };
 root.SFSum = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -8191,6 +8302,14 @@ function render(s) {
   else info = 'Sẵn sàng: ' + fmt(s.totalChapters) + ' chương → ' + fmt(s.totalBatches) + ' batch.';
   if (s.warnings && !s.running) info += ' (' + s.warnings + ' cảnh báo nhẹ, ví dụ AI bỏ sót tóm tắt một chương)';
   $('sfSumInfo').textContent = info;
+  var ci = $('sfSumChapInfo'), dg = S.plan && S.plan.diag;
+  if (ci) {
+    if (dg && s.status !== 'none') {
+      ci.style.display = ''; ci.className = 'sfsum-chapinfo' + (dg.suspicious ? ' warn' : '');
+      ci.textContent = dg.suspicious ? '⚠️ ' + dg.reason + ' Nếu đúng vậy, số chương trong Memory/Quan hệ sẽ sai. Hãy nhập “Mẫu tiêu đề chương” ở trên (hoặc bấm “Đọc lại từ đầu” để dùng bộ nhận diện mới) rồi đọc lại.'
+        : '📑 Nhận diện ' + fmt(dg.chapters) + ' chương' + (S.plan.mode === 'virtual' ? ' (file không có tiêu đề — chia theo độ dài)' : '') + ' · bộ nhận diện v' + dg.parser + (dg.chapterRe ? ' · regex tuỳ chỉnh' : '');
+    } else ci.style.display = 'none';
+  }
   var st = $('sfSumStartBtn'); st.disabled = s.running || s.status === 'none' || s.status === 'done';
   st.textContent = s.batch > 0 && s.status !== 'done' ? '▶ Tiếp tục đọc' : '▶ Bắt đầu đọc';
   $('sfSumStopBtn').style.display = s.running ? '' : 'none';
@@ -8217,7 +8336,7 @@ function renderPar(s) {
 S.onLog = log; S.onProgress = render;
 
 function currentText() { return typeof sf_getFullSourceText === 'function' ? (sf_getFullSourceText() || '') : ''; }
-function sourceSig(t) { return t.length + '|' + t.slice(0, 80) + '|' + t.slice(-80); }
+function sourceSig(t) { return t.length + '|' + t.slice(0, 80) + '|' + t.slice(-80) + '|' + (($('sfSumChapRe') || {}).value || ''); }
 async function refreshSource(force) {
   if (S.running || preparing) return;
   var t = currentText(), sg = sourceSig(t);
@@ -8225,7 +8344,7 @@ async function refreshSource(force) {
   sig = sg; preparing = true;
   try {
     if (!t.trim()) { S.job = null; S.mem = null; S.plan = null; render({ status: 'none', pct: 0, batch: 0, totalBatches: 0, chapterNo: 0, lastChapterOfFile: 0, counts: { characters: 0, events: 0, secrets: 0 }, running: false }); return; }
-    readCfg(); await SFSum.sfSumPrepare(t, { batchChars: S.cfg.batchChars });
+    readCfg(); await SFSum.sfSumPrepare(t, { batchChars: S.cfg.batchChars, chapterRe: $('sfSumChapRe').value });
     $('sfSumBatchChars').value = S.plan.batchChars;
     try { msgs = await S.store.getChat(S.job.id); } catch (e) { msgs = []; }
     renderChat(); render();
@@ -8305,17 +8424,283 @@ $('sfSumSendBtn').onclick = function () { var q = $('sfSumInput').value; $('sfSu
 $('sfSumInput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sfSumSendBtn').click(); } });
 $('sfSumModeAll').onclick = function () { ask('Tóm tắt toàn bộ truyện'); };
 $('sfSumModeRange').onclick = modeRange; $('sfSumModePlot').onclick = modePlot;
-$('sfSumModeChars').onclick = function () { localView('characters', '👥 Nhân vật'); };
-$('sfSumModeEvents').onclick = function () { localView('events', '⚡ Sự kiện quan trọng'); };
-$('sfSumModeSecrets').onclick = function () { localView('secrets', '🔮 Bí mật / 伏笔 / việc chưa giải quyết'); };
-$('sfSumModeTimeline').onclick = function () { localView('timeline', '🕰 Timeline'); };
-$('sfSumModeRel').onclick = function () { localView('relations', '🔗 Quan hệ nhân vật'); };
+function openView(kind, title) { if (window.SFSumViewer) window.SFSumViewer.open(kind); else localView(kind, title); } // viewer mới (thẻ + sơ đồ); fallback dạng text nếu viewer không nạp được
+$('sfSumModeChars').onclick = function () { openView('characters', '👥 Nhân vật'); };
+$('sfSumModeEvents').onclick = function () { openView('events', '⚡ Sự kiện quan trọng'); };
+$('sfSumModeSecrets').onclick = function () { openView('secrets', '🔮 Bí mật / 伏笔 / việc chưa giải quyết'); };
+$('sfSumModeTimeline').onclick = function () { openView('timeline', '🕰 Timeline'); };
+$('sfSumModeRel').onclick = function () { openView('relations', '🔗 Quan hệ nhân vật'); };
+$('sfSumChapRe').addEventListener('change', function () { if (!S.running) refreshSource(true); });
 $('sfSumParallel').addEventListener('change', function () { readCfg(); render(); });
 $('sfSumBatchChars').addEventListener('change', function () { if (S.job && S.job.currentBatch === 0 && !S.running) refreshSource(true); });
 var nav = $('sfSumNav'); if (nav) nav.onclick = function () { $('sfSumCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
 render({ status: 'none', pct: 0, batch: 0, totalBatches: 0, chapterNo: 0, lastChapterOfFile: 0, counts: { characters: 0, events: 0, secrets: 0 }, running: false });
 renderChat(); setInterval(function () { refreshSource(false); }, 2000); setTimeout(function () { refreshSource(true); }, 600);
+})();
+
+</script>
+<script>
+/* ===== STORYFORGE — Story Viewer (nhân vật / sơ đồ quan hệ / sự kiện / timeline / bí mật) =====
+   Chỉ ĐỌC SFSum.S.mem. Không gọi AI, không ghi gì vào Memory. Mọi text từ AI đều đi qua textContent (không innerHTML). */
+(function () {
+'use strict';
+if (typeof SFSum === 'undefined') return;
+var S = SFSum.S, root = document.getElementById('sfSumViewer'); if (!root) return;
+var NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, kids) {
+  var e = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { if (k === 'class') e.className = attrs[k]; else if (k === 'text') e.textContent = attrs[k]; else if (k.slice(0, 2) === 'on') e[k] = attrs[k]; else if (attrs[k] != null) e.setAttribute(k, attrs[k]); });
+  (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e;
+}
+function sv(tag, attrs, kids) {
+  var e = document.createElementNS(NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { if (k === 'text') e.textContent = attrs[k]; else if (k.slice(0, 2) === 'on') e[k] = attrs[k]; else if (attrs[k] != null) e.setAttribute(k, attrs[k]); });
+  (kids || []).forEach(function (c) { if (c) e.appendChild(c); }); return e;
+}
+function fmt(n) { return Number(n || 0).toLocaleString('vi-VN'); }
+function clip(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+function tok(t) { return ' ' + String(t || '').toLowerCase().split(/[^\p{L}\d]+/u).filter(Boolean).join(' ') + ' '; }
+function hasAny(t, words) { for (var i = 0; i < words.length; i++) if (t.indexOf(' ' + words[i] + ' ') >= 0) return true; return false; }
+
+/* ---- phân loại quan hệ -> màu (thứ tự quan trọng: thù/tình cảm trước, gia đình sau) ---- */
+var CATS = [
+  { id: 'enemy', name: 'Thù địch', color: '#ff6b6b', w: ['thù', 'địch', 'kẻ thù', 'đối thủ', 'đối địch', 'oán', 'hận', 'kẻ địch', 'cừu', 'thù địch', 'đối đầu', 'kình địch'] },
+  { id: 'love', name: 'Tình cảm', color: '#ff7eb6', w: ['yêu', 'người yêu', 'tình', 'tình nhân', 'phu thê', 'hôn', 'hôn ước', 'vợ', 'chồng', 'vợ chồng', 'phu nhân', 'phu quân', 'đạo lữ', 'sủng', 'tình cảm', 'bạn đời', 'thích'] },
+  { id: 'master', name: 'Sư đồ', color: '#b08cff', w: ['sư', 'đệ tử', 'thầy', 'trò', 'sư phụ', 'sư đồ', 'môn đồ', 'học trò', 'sư tỷ', 'sư muội', 'sư huynh', 'sư đệ', 'đồ đệ', 'giáo viên', 'học viên'] },
+  { id: 'rank', name: 'Chủ – tớ / cấp bậc', color: '#ffb347', w: ['cấp trên', 'cấp dưới', 'chủ', 'nô', 'nô lệ', 'chủ nô', 'thuộc hạ', 'phục tùng', 'thủ hạ', 'hầu', 'người hầu', 'bề tôi', 'thống lĩnh', 'chỉ huy', 'lãnh đạo', 'tùy tùng', 'tôi tớ', 'sở hữu', 'phụng sự', 'kỵ sĩ', 'hộ vệ', 'thị nữ', 'tay sai'] },
+  { id: 'ally', name: 'Đồng minh / bạn bè', color: '#3ecf8e', w: ['bạn', 'đồng minh', 'liên minh', 'đồng đội', 'đồng hành', 'thân', 'hợp tác', 'đối tác', 'bằng hữu', 'tri kỷ', 'ân nhân', 'thân thiết', 'đồng bọn', 'chiến hữu', 'cùng phe', 'đồng minh'] },
+  { id: 'family', name: 'Gia đình', color: '#5ea8ff', w: ['gia đình', 'huyết thống', 'cha', 'mẹ', 'bố', 'ba', 'con', 'anh', 'chị', 'em', 'họ hàng', 'ruột', 'ông', 'bà', 'cháu', 'dì', 'chú', 'cậu', 'cô', 'anh em', 'chị em', 'con gái', 'con trai', 'mẹ con', 'cha con', 'dòng họ', 'thân tộc'] },
+  { id: 'other', name: 'Khác', color: '#8b93b8', w: [] }
+];
+var CAT = {}; CATS.forEach(function (c) { CAT[c.id] = c; });
+function catOf(type) { var t = tok(type); for (var i = 0; i < CATS.length - 1; i++) if (hasAny(t, CATS[i].w)) return CATS[i].id; return 'other'; }
+
+var STAT = { alive: ['Còn sống', '#3ecf8e'], dead: ['Đã chết', '#ff6b6b'], missing: ['Mất tích', '#ffb347'], unknown: ['Không rõ', '#8b93b8'] };
+function statOf(c) { var s = String(c.status || '').toLowerCase(); return STAT[s] || (/chết|dead|die/.test(s) ? STAT.dead : /sống|alive/.test(s) ? STAT.alive : /mất tích|missing/.test(s) ? STAT.missing : STAT.unknown); }
+function hue(str) { var h = 0; str = String(str || ''); for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
+function initial(name) { var w = String(name || '?').trim().split(/\s+/); return ((w[0] || '?')[0] || '?').toUpperCase(); }
+
+/* ---- dữ liệu ---- */
+function model() {
+  var m = S.mem; if (!m) return null;
+  var byId = new Map(); m.characters.forEach(function (c) { c._deg = 0; byId.set(c.id, c); });
+  var pairs = new Map();
+  m.relations.forEach(function (r) {
+    var a = byId.get(r.a), b = byId.get(r.b); if (!a || !b || a === b) return;
+    var k = a.id < b.id ? a.id + '|' + b.id : b.id + '|' + a.id, p = pairs.get(k);
+    if (!p) { p = { a: a.id < b.id ? a.id : b.id, b: a.id < b.id ? b.id : a.id, rels: [] }; pairs.set(k, p); a._deg++; b._deg++; }
+    p.rels.push(r);
+  });
+  pairs.forEach(function (p) { p.rels.sort(function (x, y) { return (y.lastChapter || 0) - (x.lastChapter || 0); }); p.cat = catOf(p.rels[0].type); });
+  return { m: m, byId: byId, pairs: Array.from(pairs.values()) };
+}
+
+/* ---- layout ---- */
+function forceLayout(nodes, edges, W, H) {
+  var n = nodes.length, pos = {}, P = nodes.map(function (nd, i) { var a = 2 * Math.PI * i / n - Math.PI / 2; return { id: nd.id, x: W / 2 + Math.cos(a) * W * 0.3, y: H / 2 + Math.sin(a) * H * 0.3, dx: 0, dy: 0 }; });
+  var ix = {}; P.forEach(function (p, i) { ix[p.id] = i; });
+  var k = Math.sqrt(W * H / Math.max(1, n)) * 0.8, t = W / 7, mx = 56, my = 34;
+  for (var it = 0; it < 320; it++) {
+    P.forEach(function (p) { p.dx = 0; p.dy = 0; });
+    for (var i = 0; i < n; i++) for (var j = i + 1; j < n; j++) {
+      var dx = P[i].x - P[j].x, dy = P[i].y - P[j].y, d = Math.sqrt(dx * dx + dy * dy) + 0.01, f = k * k / d;
+      P[i].dx += dx / d * f; P[i].dy += dy / d * f; P[j].dx -= dx / d * f; P[j].dy -= dy / d * f;
+    }
+    edges.forEach(function (e) {
+      var a = P[ix[e.a]], b = P[ix[e.b]]; if (!a || !b) return;
+      var dx = a.x - b.x, dy = a.y - b.y, d = Math.sqrt(dx * dx + dy * dy) + 0.01, f = d * d / k * 0.9;
+      a.dx -= dx / d * f; a.dy -= dy / d * f; b.dx += dx / d * f; b.dy += dy / d * f;
+    });
+    P.forEach(function (p) {
+      p.dx -= (p.x - W / 2) * 0.35; p.dy -= (p.y - H / 2) * 0.35;
+      var d = Math.sqrt(p.dx * p.dx + p.dy * p.dy) + 0.01, l = Math.min(d, t);
+      p.x = Math.max(mx, Math.min(W - mx, p.x + p.dx / d * l)); p.y = Math.max(my, Math.min(H - my, p.y + p.dy / d * l));
+    });
+    t *= 0.985;
+  }
+  P.forEach(function (p) { pos[p.id] = { x: p.x, y: p.y }; }); return pos;
+}
+
+var st = { kind: null, q: '', page: 1, focus: null, topN: 18, off: {}, zoom: 1, status: 'all', sub: 'all' };
+var shell = null, bodyEl = null, searchEl = null, titleEl = null, subEl = null, TITLES = { characters: '👥 Nhân vật', relations: '🔗 Sơ đồ quan hệ', events: '⚡ Sự kiện quan trọng', timeline: '🕰 Timeline', secrets: '🔮 Bí mật / 伏笔 / việc chưa giải quyết' };
+
+function open(kind) {
+  if (!S.mem) { alert('Chưa có dữ liệu. Hãy bấm “Bắt đầu đọc” trước.'); return; }
+  if (st.kind !== kind) { st.q = ''; st.page = 1; st.focus = null; st.sub = 'all'; st.status = 'all'; st.zoom = 1; }
+  st.kind = kind; build(); draw(); root.style.display = '';
+  try { root.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+}
+function close() { root.style.display = 'none'; st.kind = null; }
+function build() {
+  root.textContent = '';
+  titleEl = el('div', { class: 'sfv-title' }); subEl = el('div', { class: 'sfv-sub' });
+  var closeB = el('button', { class: 'sfv-x', title: 'Đóng', text: '✕', onclick: close }), refB = el('button', { class: 'sfv-x', title: 'Làm mới dữ liệu', text: '↻', onclick: function () { draw(); } });
+  var head = el('div', { class: 'sfv-head' }, [el('div', { class: 'sfv-headtxt' }, [titleEl, subEl]), refB, closeB]);
+  searchEl = el('input', { class: 'sfv-search', type: 'search', placeholder: st.kind === 'relations' ? 'Tìm nhân vật để xem quan hệ…' : 'Tìm trong danh sách…', value: st.q });
+  searchEl.oninput = function () { st.q = searchEl.value; st.page = 1; draw(); };
+  bodyEl = el('div', { class: 'sfv-body' }); shell = el('div', { class: 'sfv-shell' }, [head, searchEl, bodyEl]); root.appendChild(shell);
+}
+function draw() {
+  if (!bodyEl) return; var md = model(); if (!md) return;
+  titleEl.textContent = TITLES[st.kind] || '';
+  var done = S.job && S.job.status === 'done';
+  subEl.textContent = 'Đã đọc tới chương ' + fmt(md.m.lastChapterNo) + (done ? ' · đã đọc hết file' : ' · CHƯA đọc hết file');
+  bodyEl.textContent = '';
+  ({ characters: drawChars, relations: drawRel, events: drawEvents, timeline: drawTimeline, secrets: drawSecrets })[st.kind](md);
+}
+function put(n) { if (n) bodyEl.appendChild(n); }
+function empty(msg) { return el('div', { class: 'sfv-empty', text: msg || 'Chưa có dữ liệu loại này.' }); }
+function badge(text, color) { var b = el('span', { class: 'sfv-badge', text: text }); if (color) { b.style.color = color; b.style.borderColor = color; } return b; }
+function chips(opts, cur, on) { return el('div', { class: 'sfv-chips' }, opts.map(function (o) { return el('button', { class: 'sfv-chip' + (cur === o[0] ? ' on' : ''), text: o[1], onclick: function () { on(o[0]); } }); })); }
+function more(total, shown, cb) { return shown < total ? el('button', { class: 'sfv-more', text: 'Xem thêm (' + fmt(total - shown) + ' mục)', onclick: cb }) : null; }
+function match(q, arr) { if (!q) return true; q = q.toLowerCase(); return arr.join(' ').toLowerCase().indexOf(q) >= 0; }
+
+/* ---- Nhân vật ---- */
+function drawChars(md) {
+  var all = md.m.characters.slice().sort(function (a, b) { return (b.appearances || 0) - (a.appearances || 0); });
+  var cnt = { alive: 0, dead: 0, other: 0 }; all.forEach(function (c) { var s = statOf(c); if (s === STAT.alive) cnt.alive++; else if (s === STAT.dead) cnt.dead++; else cnt.other++; });
+  bodyEl.appendChild(chips([['all', 'Tất cả ' + all.length], ['alive', 'Còn sống ' + cnt.alive], ['dead', 'Đã chết ' + cnt.dead], ['other', 'Khác ' + cnt.other]], st.status, function (v) { st.status = v; st.page = 1; draw(); }));
+  var list = all.filter(function (c) {
+    var s = statOf(c); if (st.status === 'alive' && s !== STAT.alive) return false; if (st.status === 'dead' && s !== STAT.dead) return false; if (st.status === 'other' && (s === STAT.alive || s === STAT.dead)) return false;
+    return match(st.q, [c.name].concat(c.aliases || [], [c.faction, c.realm, c.identity]));
+  });
+  if (!list.length) { bodyEl.appendChild(empty('Không có nhân vật phù hợp.')); return; }
+  var size = 20, shown = list.slice(0, st.page * size), wrap = el('div', { class: 'sfv-cards' });
+  shown.forEach(function (c) {
+    var s = statOf(c), av = el('div', { class: 'sfv-av', text: initial(c.name) }); av.style.background = 'hsl(' + hue(c.faction || c.name) + ',45%,32%)';
+    av.style.boxShadow = '0 0 0 2px ' + s[1];
+    var meta = [c.realm, c.faction ? 'Phe: ' + c.faction : ''].filter(Boolean).join(' · ');
+    var kids = [el('div', { class: 'sfv-cardtop' }, [av, el('div', { class: 'sfv-cardname' }, [el('div', { class: 'sfv-name', text: c.name }), meta ? el('div', { class: 'sfv-meta', text: meta }) : null]), badge(s[0], s[1])])];
+    kids.push(el('div', { class: 'sfv-meta', text: 'Chương ' + c.firstChapter + ' → ' + c.lastChapter + ' · ' + fmt(c.appearances || 0) + ' lần xuất hiện' + (c.confidence === 'uncertain' || c.needsCheck ? ' · ⚠ cần kiểm tra' : '') }));
+    if (c.aliases && c.aliases.length) kids.push(el('div', { class: 'sfv-alias' }, c.aliases.slice(0, 6).map(function (a) { return el('span', { text: a }); })));
+    if (c.identity) { var idt = el('div', { class: 'sfv-ident clamp', text: c.identity }); idt.onclick = function () { idt.classList.toggle('clamp'); }; kids.push(idt); }
+    if (c._deg) kids.push(el('button', { class: 'sfv-link', text: '🔗 Xem quan hệ (' + c._deg + ')', onclick: function () { st.kind = 'relations'; st.focus = c.id; st.q = ''; build(); draw(); } }));
+    wrap.appendChild(el('div', { class: 'sfv-card' }, kids));
+  });
+  bodyEl.appendChild(wrap); put(more(list.length, shown.length, function () { st.page++; draw(); }));
+}
+
+/* ---- Sơ đồ quan hệ ---- */
+function relLegend(md, pairsShown) {
+  var counts = {}; pairsShown.forEach(function (p) { counts[p.cat] = (counts[p.cat] || 0) + 1; });
+  return el('div', { class: 'sfv-legend' }, CATS.filter(function (c) { return counts[c.id]; }).map(function (c) {
+    var b = el('button', { class: 'sfv-leg' + (st.off[c.id] ? ' off' : ''), onclick: function () { st.off[c.id] = !st.off[c.id]; draw(); } }, [el('i', { style: 'background:' + c.color }), c.name + ' · ' + counts[c.id]]); return b;
+  }));
+}
+function drawRel(md) {
+  var q = (st.q || '').trim().toLowerCase();
+  if (!md.pairs.length) { bodyEl.appendChild(empty('Chưa có quan hệ nào trong Story Memory.')); return; }
+  if (q) { // tìm kiếm nhân vật
+    var hits = md.m.characters.filter(function (c) { return match(q, [c.name].concat(c.aliases || [])); }).sort(function (a, b) { return b._deg - a._deg; }).slice(0, 12);
+    bodyEl.appendChild(el('div', { class: 'sfv-hint', text: hits.length ? 'Chạm vào nhân vật để xem sơ đồ quan hệ:' : 'Không tìm thấy nhân vật.' }));
+    bodyEl.appendChild(el('div', { class: 'sfv-chips' }, hits.map(function (c) { return el('button', { class: 'sfv-chip', text: c.name + ' (' + c._deg + ')', onclick: function () { st.focus = c.id; st.q = ''; searchEl.value = ''; draw(); } }); })));
+    return;
+  }
+  if (st.focus && md.byId.get(st.focus)) drawEgo(md, md.byId.get(st.focus)); else { st.focus = null; drawOverview(md); }
+}
+function nodeEl(c, x, y, r, opts) {
+  var s = statOf(c), dead = s === STAT.dead, g = sv('g', { class: 'sfv-node', style: 'cursor:pointer', onclick: function () { st.focus = c.id; st.zoom = 1; draw(); } });
+  g.appendChild(sv('circle', { cx: x, cy: y, r: r + 3, fill: 'none', stroke: s[1], 'stroke-width': opts && opts.center ? 2.5 : 1.5, opacity: .9 }));
+  g.appendChild(sv('circle', { cx: x, cy: y, r: r, fill: dead ? '#3a3f5c' : 'hsl(' + hue(c.faction || c.name) + ',50%,38%)' }));
+  g.appendChild(sv('text', { x: x, y: y + (opts && opts.center ? 6 : 4), 'text-anchor': 'middle', 'font-size': opts && opts.center ? 17 : Math.max(9, r * 0.95), fill: '#fff', 'font-weight': 700, text: initial(c.name) }));
+  var lab = clip(c.name, opts && opts.center ? 22 : 12), ly = y + r + 14;
+  g.appendChild(sv('text', { x: x, y: ly, 'text-anchor': 'middle', 'font-size': opts && opts.center ? 13 : 10.5, 'font-weight': opts && opts.center ? 700 : 500, class: 'sfv-lbl', text: lab }));
+  return g;
+}
+function graphWrap(svg) {
+  var box = el('div', { class: 'sfv-graph' }, [svg]); svg.style.width = (st.zoom * 100) + '%';
+  var zb = el('div', { class: 'sfv-zoom' }, [
+    el('button', { text: '＋', title: 'Phóng to', onclick: function () { st.zoom = Math.min(3, st.zoom + 0.5); svg.style.width = (st.zoom * 100) + '%'; } }),
+    el('button', { text: '－', title: 'Thu nhỏ', onclick: function () { st.zoom = Math.max(1, st.zoom - 0.5); svg.style.width = (st.zoom * 100) + '%'; } })]);
+  return el('div', { class: 'sfv-graphbox' }, [box, zb]);
+}
+function drawOverview(md) {
+  var W = 360, H = 400;
+  bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('span', { class: 'sfv-hint', text: 'Hiển thị' }), chips([[12, 'Top 12'], [18, 'Top 18'], [30, 'Top 30']], st.topN, function (v) { st.topN = v; draw(); })]));
+  var top = md.m.characters.filter(function (c) { return c._deg > 0; }).sort(function (a, b) { return b._deg - a._deg || (b.appearances || 0) - (a.appearances || 0); }).slice(0, st.topN), ids = new Set(top.map(function (c) { return c.id; }));
+  var edges = md.pairs.filter(function (p) { return ids.has(p.a) && ids.has(p.b); }), shownE = edges.filter(function (p) { return !st.off[p.cat]; });
+  bodyEl.appendChild(relLegend(md, edges));
+  var pos = forceLayout(top.map(function (c) { return { id: c.id }; }), shownE, W, H), svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img' });
+  shownE.forEach(function (p) { var a = pos[p.a], b = pos[p.b]; svg.appendChild(sv('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: CAT[p.cat].color, 'stroke-width': 1.6 + Math.min(1.5, (p.rels.length - 1) * 0.5), opacity: .8, 'stroke-linecap': 'round' })); });
+  top.forEach(function (c) { var q = pos[c.id]; svg.appendChild(nodeEl(c, q.x, q.y, 7 + Math.min(9, c._deg * 0.8))); });
+  bodyEl.appendChild(graphWrap(svg));
+  bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Chạm vào một nhân vật để xem riêng mạng quan hệ của họ. Viền: xanh = còn sống, đỏ = đã chết, cam = mất tích. Màu đường nối = loại quan hệ.' }));
+  var rest = md.m.characters.filter(function (c) { return c._deg > 0 && !ids.has(c.id); }).sort(function (a, b) { return b._deg - a._deg; }).slice(0, 24);
+  if (rest.length) { bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Nhân vật khác có quan hệ:' })); bodyEl.appendChild(el('div', { class: 'sfv-chips' }, rest.map(function (c) { return el('button', { class: 'sfv-chip', text: c.name + ' (' + c._deg + ')', onclick: function () { st.focus = c.id; draw(); } }); }))); }
+}
+function drawEgo(md, c) {
+  var W = 360, H = 400, cx = W / 2, cy = H / 2, mine = md.pairs.filter(function (p) { return p.a === c.id || p.b === c.id; });
+  bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('button', { class: 'sfv-chip', text: '← Toàn cảnh', onclick: function () { st.focus = null; st.zoom = 1; draw(); } }), el('span', { class: 'sfv-hint', text: fmt(mine.length) + ' nhân vật có quan hệ với ' + c.name })]));
+  bodyEl.appendChild(relLegend(md, mine));
+  var shownP = mine.filter(function (p) { return !st.off[p.cat]; }).sort(function (x, y) { return CATS.indexOf(CAT[x.cat]) - CATS.indexOf(CAT[y.cat]); }), N = Math.min(shownP.length, 30), ring = shownP.slice(0, N);
+  var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img' }), showLabels = N <= 10, two = N > 14;
+  var nodes = [];
+  ring.forEach(function (p, i) {
+    var o = md.byId.get(p.a === c.id ? p.b : p.a), a = 2 * Math.PI * i / N - Math.PI / 2, rr = two ? (i % 2 ? 0.62 : 1) : 1, x = cx + Math.cos(a) * 128 * rr, y = cy + Math.sin(a) * 150 * rr;
+    svg.appendChild(sv('line', { x1: cx, y1: cy, x2: x, y2: y, stroke: CAT[p.cat].color, 'stroke-width': 2, opacity: .85, 'stroke-linecap': 'round' }));
+    nodes.push([o, x, y, p]);
+  });
+  if (showLabels) nodes.forEach(function (n) {
+    var p = n[3], types = []; p.rels.forEach(function (r) { if (types.indexOf(r.type) < 0) types.push(r.type); });
+    var t = clip(types.join(' / '), 18), mx = cx + (n[1] - cx) * 0.6, my = cy + (n[2] - cy) * 0.6, w = t.length * 5.7 + 10;
+    svg.appendChild(sv('rect', { x: mx - w / 2, y: my - 8, width: w, height: 16, rx: 8, fill: '#0e1020', stroke: CAT[p.cat].color, 'stroke-width': 1 }));
+    svg.appendChild(sv('text', { x: mx, y: my + 3.5, 'text-anchor': 'middle', 'font-size': 9.5, fill: CAT[p.cat].color, 'font-weight': 600, text: t }));
+  });
+  nodes.forEach(function (n) { svg.appendChild(nodeEl(n[0], n[1], n[2], 10)); });
+  svg.appendChild(nodeEl(c, cx, cy, 22, { center: true }));
+  bodyEl.appendChild(graphWrap(svg));
+  if (shownP.length > N) bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Sơ đồ chỉ vẽ ' + N + '/' + shownP.length + ' quan hệ; xem đầy đủ ở danh sách bên dưới.' }));
+  /* danh sách chi tiết, nhóm theo loại */
+  var det = el('div', { class: 'sfv-detail' });
+  CATS.forEach(function (cat) {
+    var rows = mine.filter(function (p) { return p.cat === cat.id && !st.off[cat.id]; }); if (!rows.length) return;
+    det.appendChild(el('div', { class: 'sfv-grp' }, [el('i', { style: 'background:' + cat.color }), cat.name + ' (' + rows.length + ')']));
+    rows.forEach(function (p) {
+      var o = md.byId.get(p.a === c.id ? p.b : p.a), lines = p.rels.map(function (r) {
+        var dir = r.a === c.id ? '→' : '←', hist = r.history && r.history.length ? ' · trước đó: ' + r.history.map(function (h) { return h.type + ' (ch.' + h.sourceChapter + '→' + h.untilChapter + ')'; }).join(', ') : '';
+        return dir + ' ' + r.type + ' · từ ch.' + r.sourceChapter + hist;
+      });
+      var s = statOf(o), row = el('div', { class: 'sfv-row', style: 'border-left-color:' + cat.color }, [
+        el('div', { class: 'sfv-rowtop' }, [el('button', { class: 'sfv-who', text: o.name, onclick: function () { st.focus = o.id; st.zoom = 1; draw(); try { shell.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} } }), badge(s[0], s[1])]),
+        el('div', { class: 'sfv-rels' }, lines.map(function (l) { return el('div', { text: l }); }))]);
+      det.appendChild(row);
+    });
+  });
+  bodyEl.appendChild(det);
+}
+
+/* ---- Sự kiện / Timeline / Bí mật ---- */
+function listCards(items, mkCard) {
+  if (!items.length) { bodyEl.appendChild(empty(st.q ? 'Không có mục phù hợp.' : null)); return; }
+  var size = 25, shown = items.slice(0, st.page * size), wrap = el('div', { class: 'sfv-cards' }); shown.forEach(function (it) { wrap.appendChild(mkCard(it)); });
+  bodyEl.appendChild(el('div', { class: 'sfv-hint', text: fmt(items.length) + ' mục' })); bodyEl.appendChild(wrap); put(more(items.length, shown.length, function () { st.page++; draw(); }));
+}
+function drawEvents(md) {
+  var items = md.m.events.filter(function (e) { return e.importance >= 4 && match(st.q, [e.event, e.consequence, e.kind]); }).sort(function (a, b) { return a.chapter - b.chapter; });
+  listCards(items, function (e) {
+    return el('div', { class: 'sfv-card' }, [el('div', { class: 'sfv-cardtop' }, [badge('Ch.' + e.chapter, '#7ab8ff'), e.kind ? badge(e.kind) : null, e.confidence === 'uncertain' ? badge('chưa chắc', '#ffb347') : null]),
+      el('div', { class: 'sfv-text', text: e.event }), e.consequence ? el('div', { class: 'sfv-cons', text: '⇒ ' + e.consequence }) : null]);
+  });
+}
+function drawTimeline(md) {
+  var items = md.m.timeline.slice().sort(function (a, b) { return a.chapter - b.chapter || a.order - b.order; }).filter(function (t) { return match(st.q, [t.event, t.consequence, t.location]); });
+  listCards(items, function (t) {
+    return el('div', { class: 'sfv-card' }, [el('div', { class: 'sfv-cardtop' }, [badge('Ch.' + t.chapter, '#7ab8ff'), t.isFlashback ? badge('flashback' + (t.storyTime ? ': ' + t.storyTime : ''), '#b08cff') : null, t.location ? badge('📍 ' + t.location) : null]),
+      el('div', { class: 'sfv-text', text: t.event }), t.consequence ? el('div', { class: 'sfv-cons', text: '⇒ ' + t.consequence }) : null]);
+  });
+}
+function drawSecrets(md) {
+  var arr = []; md.m.mysteries.concat(md.m.foreshadowing).forEach(function (t) { arr.push({ chapter: t.chapter, text: t.text, kind: t.status === 'resolved' ? 'resolved' : 'open', conf: t.confidence }); });
+  md.m.unresolvedThreads.forEach(function (t) { arr.push({ chapter: t.chapter, text: t.text, kind: 'thread' }); });
+  var c = { open: 0, resolved: 0, thread: 0 }; arr.forEach(function (a) { c[a.kind]++; });
+  bodyEl.appendChild(chips([['all', 'Tất cả ' + arr.length], ['open', 'Chưa giải ' + c.open], ['resolved', 'Đã giải ' + c.resolved], ['thread', 'Việc dang dở ' + c.thread]], st.sub, function (v) { st.sub = v; st.page = 1; draw(); }));
+  var items = arr.filter(function (a) { return (st.sub === 'all' || a.kind === st.sub) && match(st.q, [a.text]); }).sort(function (a, b) { return a.chapter - b.chapter; });
+  var L = { open: ['Chưa giải', '#ffb347'], resolved: ['Đã giải', '#3ecf8e'], thread: ['Việc dang dở', '#7ab8ff'] };
+  listCards(items, function (a) { return el('div', { class: 'sfv-card' }, [el('div', { class: 'sfv-cardtop' }, [badge('Ch.' + a.chapter, '#7ab8ff'), badge(L[a.kind][0], L[a.kind][1]), a.conf === 'uncertain' ? badge('chưa chắc', '#ffb347') : null]), el('div', { class: 'sfv-text', text: a.text })]); });
+}
+
+window.SFSumViewer = { open: open, close: close, catOf: catOf, state: st };
 })();
 
 </script>
