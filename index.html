@@ -435,6 +435,12 @@
   .sfsum-chat{max-height:380px; min-height:90px; overflow:auto; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px;}
   .sfsum-msg{padding:8px 11px; border-radius:10px; font-size:13px; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-width:92%;}
   .sfsum-msg.user{align-self:flex-end; background:#2a2560; color:#e9e6ff;} .sfsum-msg.bot{align-self:flex-start; background:#171b33; border:1px solid var(--panel-border);}
+  .sfsum-par{margin:8px 0 10px; padding:9px 11px; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:10px; font-size:12.5px;}
+  .sfsum-parhead{font-weight:600; margin-bottom:6px;} .sfsum-parhead span{font-weight:400; color:var(--text-dim);}
+  .sfsum-parstats{display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--text-dim); margin-bottom:6px;} .sfsum-parstats b{color:var(--text);}
+  .sfsum-workers{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:2px 14px; font:11.5px/1.6 ui-monospace,Consolas,monospace;}
+  .sfsum-w.running{color:#7ab8ff;} .sfsum-w.done{color:var(--green);} .sfsum-w.cooldown{color:var(--amber);} .sfsum-w.off{color:var(--red);} .sfsum-w.idle{color:var(--text-dim);}
+  .sfsum-parkeys{margin-top:6px; color:var(--text-dim); font:11.5px/1.6 ui-monospace,Consolas,monospace; word-spacing:6px;}
   .sfsum-hint{font-size:12px; color:var(--text-dim); line-height:1.5;}
   .sfsum-inputrow{display:flex; gap:8px; margin-top:8px; align-items:flex-end;}
   .sfsum-inputrow textarea{flex:1; padding:8px 10px; background:var(--input-bg); color:var(--text); border:1px solid var(--panel-border); border-radius:10px; font:inherit; font-size:13px;}
@@ -906,11 +912,12 @@
     <!-- ===== CHATBOT TRUYỆN — Summary Engine (module độc lập, không đụng hệ thống dịch) ===== -->
     <div class="card" id="sfSumCard">
       <h2>🤖 Chatbot truyện <span class="sfsum-pill none" id="sfSumPill">chưa có file</span></h2>
-      <p class="sub">Đọc tuần tự TOÀN BỘ file truyện (chia batch theo chương, không giới hạn số chương/batch), xây Story Memory rồi tóm tắt &amp; trả lời. Độc lập với hệ thống dịch, dùng chung API Key Pool. Tự lưu sau mỗi batch, đóng trình duyệt vẫn tiếp tục được.</p>
+      <p class="sub">Đọc TOÀN BỘ file truyện (chia batch theo chương, không giới hạn số chương/batch) bằng nhiều API key SONG SONG, rồi gộp vào Story Memory theo đúng thứ tự batch để tóm tắt &amp; trả lời. Độc lập với hệ thống dịch, dùng chung API Key Pool. Tự lưu liên tục, đóng trình duyệt vẫn tiếp tục được (batch đã xong không bị mất).</p>
       <div class="sfsum-row">
         <label>Ký tự / batch <input type="number" id="sfSumBatchChars" min="3000" max="200000" step="1000" value="20000"></label>
         <label>Nén Memory mỗi <input type="number" id="sfSumCompressEvery" min="1" max="1000" value="10"> batch</label>
         <label>Context Memory (ký tự) <input type="number" id="sfSumCtxChars" min="3000" max="60000" step="1000" value="14000"></label>
+        <label title="Trần số request summary chạy đồng thời. Thực tế = min(số key khả dụng, giá trị này, số key còn RPM)">Parallel Summary <input type="number" id="sfSumParallel" min="1" max="20" step="1" value="7"></label>
       </div>
       <div class="btn-row">
         <button class="btn primary" id="sfSumStartBtn" disabled>▶ Bắt đầu đọc</button>
@@ -921,6 +928,7 @@
       <div class="sfsum-info" id="sfSumInfo"></div>
       <div class="sfsum-bar"><div id="sfSumBarFill"></div></div>
       <div class="sfsum-stats" id="sfSumStats"></div>
+      <div class="sfsum-par" id="sfSumPar" style="display:none;"></div>
       <details class="sfsum-details"><summary>Nhật ký đọc</summary><div id="sfSumLog" class="sfsum-log"></div></details>
 
       <div class="sfsum-modes">
@@ -7008,14 +7016,21 @@ sfCloud.init();
    ('StoryForgeSummary'), chỉ DÙNG LẠI (đọc/gọi): state.keys/keyMeta,
    pickAvailableKey, recordKeyCall, getNearestCooldownMs, hasUsableKey,
    chatUrl, wrapUrl, sf_getFullSourceText, sf_computeSourceHash.
-   Engine đọc KHÔNG có bất kỳ giới hạn số lượng batch nào: vòng lặp đi 0 → END.
+   Engine đọc KHÔNG có bất kỳ giới hạn số lượng batch nào: đi 0 → END.
+   v15.7f — MULTI-KEY PARALLEL: đọc/phân tích batch SONG SONG bằng bounded
+   worker pool (runPool) dùng chung Key Pool; kết quả từng batch lưu riêng
+   (j.results[batchIndex]) rồi GỘP vào Story Memory TUẦN TỰ theo batchIndex
+   (flushMerge) — không bao giờ có 2 request cùng ghi S.mem.
    ===================================================================== */
 (function (root) {
 'use strict';
 
 var EV_KEY_LEN = 96, DESC_SHORT = 110;
 var CFG_DEFAULT = { batchChars: 20000, ctxChars: 14000, compressEvery: 10,
-  maxAttempts: 6, maxRateRetries: 60, backoffBase: 1500, timeoutMs: 240000, memSoftLimit: 900000 };
+  maxAttempts: 6, maxRateRetries: 60, backoffBase: 1500, timeoutMs: 240000, memSoftLimit: 900000,
+  parallel: 7,        // trần request summary đồng thời (UI: 1–20). Thực tế = min(key khả dụng, parallel, key còn RPM)
+  lookahead: 6,       // cửa sổ chạy trước: chỉ giao batch i < (batch chưa gộp đầu tiên + parallel*lookahead) -> chặn buffer vô hạn khi 1 batch chậm
+  maxBatchRounds: 3 };// số lần đưa batch lỗi quay lại hàng đợi (mỗi lần callAI còn tự retry/đổi key) trước khi dừng ở trạng thái lỗi
 
 /* ------------------------------ utils ------------------------------ */
 function sleep(ms, signal) {
@@ -7600,7 +7615,9 @@ function makeMemStore() { // dùng cho test; hành vi giống IDB (clone JSON, g
 
 /* ------------------------- 10. ENGINE ------------------------- */
 var S = { cfg: Object.assign({}, CFG_DEFAULT), store: null, text: '', hash: '', plan: null, job: null, mem: null, sums: new Map(),
-  running: false, stop: false, ac: null, ui: null, onProgress: null, onLog: null, getSource: null };
+  running: false, stop: false, ac: null, ui: null, onProgress: null, onLog: null, getSource: null, par: newPar() };
+// Trạng thái runtime của worker pool (chỉ để hiển thị/kiểm chứng; KHÔNG phải key pool thứ hai)
+function newPar() { return { active: new Map(), lastDone: {}, keyReq: {}, log: [], failedSet: new Set(), retries: 0, reqInFlight: 0, peakRequests: 0, peakBatches: 0, lastWaitLog: 0, startedAt: 0 }; }
 
 function log(msg, type) { if (S.onLog) try { S.onLog(msg, type || 'info'); } catch (e) {} }
 function progress() { if (S.onProgress) try { S.onProgress(snapshot()); } catch (e) {} }
@@ -7610,12 +7627,34 @@ function counts() {
   return { characters: m.characters.length, events: m.events.length, relations: m.relations.length,
     secrets: m.mysteries.length + m.foreshadowing.length + m.unresolvedThreads.length };
 }
+function parSnapshot() {
+  var P = S.par, j = S.job, p = S.plan, st = ST(), total = p ? p.batches.length : 0, merged = j ? j.currentBatch : 0;
+  var held = j && j.results ? Object.keys(j.results).length : 0, completed = merged + held, run = P.active.size;
+  var nKeys = st && st.keys ? st.keys.length : 0, eff = 1, avail = 0;
+  try { avail = keyAvailCount(); eff = effectiveConcurrency(); } catch (e) {}
+  var workers = [];
+  for (var k = 0; k < nKeys; k++) {
+    var w = { key: k, requests: (j && j.keyStats && j.keyStats[k]) || 0, state: 'idle', batch: -1 };
+    P.active.forEach(function (r) { if (r.keyIndex === k) { w.state = 'running'; w.batch = r.batch; w.attempt = r.attempt; } });
+    if (w.state === 'idle' && P.lastDone[k]) { w.state = 'done'; w.batch = P.lastDone[k].batch; }
+    var m = st.keyMeta && st.keyMeta[k];
+    if (w.state === 'idle' && m && (m.status === 'error' || m.status === 'disabled')) w.state = 'off';
+    else if (w.state === 'idle' && m && m.status === 'ratelimited' && Date.now() < m.rateLimitUntil) w.state = 'cooldown';
+    workers.push(w);
+  }
+  var waiting = 0; P.active.forEach(function (r) { if (r.keyIndex === -1) waiting++; });
+  return { limit: Math.max(1, Math.min(20, parseInt(S.cfg.parallel, 10) || 7)), effective: eff, keysAvailable: avail, keys: nKeys, running: run, waitingForKey: waiting,
+    completed: completed, merged: merged, heldForOrder: held, pending: Math.max(0, total - completed - run), failed: P.failedSet.size, retries: P.retries,
+    peakRequests: P.peakRequests, peakBatches: P.peakBatches, workers: workers };
+}
 function snapshot() {
   var j = S.job, p = S.plan, nextB = j ? j.currentBatch : 0, total = p ? p.batches.length : 0;
-  return { status: j ? j.status : 'none', running: S.running, batch: nextB, totalBatches: total,
+  var held = j && j.results ? Object.keys(j.results).length : 0, completed = Math.min(total, nextB + held);
+  return { status: j ? j.status : 'none', running: S.running, batch: nextB, totalBatches: total, completedBatches: completed,
     chapterNo: S.mem ? S.mem.lastChapterNo : 0, lastChapterOfFile: p && p.chapters.length ? p.chapters[p.chapters.length - 1].no : 0,
     chaptersDone: j ? j.processedChapters : 0, totalChapters: p ? p.chapters.length : 0,
-    pct: total ? (nextB / total * 100) : 0, counts: counts(), lastError: j ? j.lastError : '', warnings: j ? (j.warnings || []).length : 0 };
+    pct: total ? (completed / total * 100) : 0, counts: counts(), lastError: j ? j.lastError : '', warnings: j ? (j.warnings || []).length : 0,
+    par: parSnapshot() };
 }
 
 /* ---- gọi AI dùng chung Key Pool (KHÔNG dùng callModel vì nó chèn prompt dịch) ---- */
@@ -7663,49 +7702,95 @@ async function oneRequest(prompt, k, outerSignal) {
 function isPayloadErr(e) {
   return e.status === 413 || (e.status === 400 && /context|too long|too large|maximum|token|exceed|length/i.test(e.bodyText || ''));
 }
-async function callAI(prompt, signal) {
+/* ---- helpers cho worker pool: CHỈ ĐỌC trạng thái Key Pool hiện có (state.keys/keyMeta, keyRpmInfo, keyScore) ---- */
+function keyOK(i, now) { var m = ST().keyMeta[i]; return !!m && m.status !== 'error' && m.status !== 'disabled' && !(m.status === 'ratelimited' && now < m.rateLimitUntil); }
+function keyAvailCount() { // số key khả dụng NGAY BÂY GIỜ (không 401/403, không tắt, không đang cooldown 429)
+  var st = ST(), n = 0, now = Date.now(); if (!st || !st.keys) return 0;
+  if (typeof root.ensureKeyMeta === 'function') root.ensureKeyMeta();
+  for (var i = 0; i < st.keys.length; i++) if (keyOK(i, now)) n++; return n;
+}
+function keyRoomCount() { // số key khả dụng VÀ còn chỗ trong cửa sổ RPM (keyRpmInfo != FULL)
+  var st = ST(), n = 0, now = Date.now(); if (!st || !st.keys) return 0;
+  for (var i = 0; i < st.keys.length; i++) if (keyOK(i, now) && !(typeof root.keyRpmInfo === 'function' && root.keyRpmInfo(i).status === 'FULL')) n++;
+  return n;
+}
+// effectiveConcurrency = min(số key khả dụng, trần Summary, số key còn RPM thực tế). Không hard-code 7.
+function effectiveConcurrency() {
+  var avail = keyAvailCount(), room = keyRoomCount(), lim = Math.max(1, Math.min(20, parseInt(S.cfg.parallel, 10) || CFG_DEFAULT.parallel));
+  var eff = Math.min(avail, lim, room);
+  if (IS_TRANSLATING()) eff = Math.min(eff, Math.max(1, Math.floor(avail / 2))); // ngân sách Summary khi dịch đang chạy: tối đa nửa số key khả dụng, không bao giờ tranh hết key của scheduler dịch
+  return Math.max(1, eff); // ≥1: nếu mọi key đang cooldown thì 1 worker chờ đúng thời điểm (callAI), không deadlock
+}
+function pickOtherKey(avoid) { // chọn key KHÁC `avoid` theo đúng điểm số của Key Pool (keyScore: RPM + inFlight + lỗi)
+  var st = ST(), now = Date.now(), best = -1, bs = Infinity;
+  for (var i = 0; i < st.keys.length; i++) {
+    if (i === avoid || !keyOK(i, now)) continue;
+    if (typeof root.keyRpmInfo === 'function' && root.keyRpmInfo(i).status === 'FULL') continue;
+    var sc = typeof root.keyScore === 'function' ? root.keyScore(i) : (st.keyMeta[i].inFlight || 0);
+    if (sc < bs) { bs = sc; best = i; }
+  }
+  return best;
+}
+function reqBegin(rec, k) { // ghi {batchIndex,keyIndex,attempt,startedAt}; đo số request ĐỒNG THỜI thực tế
+  var P = S.par, e = { batchIndex: rec.batch, keyIndex: k, attempt: rec.attempt, startedAt: Date.now(), finishedAt: 0, status: 'run' };
+  P.reqInFlight++; if (P.reqInFlight > P.peakRequests) P.peakRequests = P.reqInFlight;
+  P.keyReq[k] = (P.keyReq[k] || 0) + 1;
+  if (S.job) { S.job.keyStats = S.job.keyStats || {}; S.job.keyStats[k] = (S.job.keyStats[k] || 0) + 1; }
+  P.log.push(e); if (P.log.length > 600) P.log.shift();
+  return e;
+}
+function reqEnd(e, status) { e.finishedAt = Date.now(); e.status = status; S.par.reqInFlight = Math.max(0, S.par.reqInFlight - 1); }
+
+// rec (tuỳ chọn) = { batch, keyIndex, attempt, avoid } của worker pool. Không có rec => hành vi cũ (tuần tự, dùng cho chatbot/compile).
+async function callAI(prompt, signal, rec) {
   var attempt = 0, rate = 0, last = null;
   if (typeof root.ensureKeyMeta === 'function') root.ensureKeyMeta();
   while (true) {
     if (signal && signal.aborted) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; }
     var k = root.pickAvailableKey();
+    if (k !== -1 && rec && rec.avoid === k) { var alt = pickOtherKey(k); if (alt !== -1) k = alt; } // retry ưu tiên key KHÁC key vừa lỗi
     if (k === -1) {
       if (!usable()) { var ef = new Error('Không còn API key khả dụng (401/403 hoặc đã tắt).'); ef.fatal = true; throw ef; }
       var w = Math.min(typeof root.getNearestCooldownMs === 'function' ? root.getNearestCooldownMs() : 3000, 120000);
-      log('Đang chờ key sẵn sàng ' + Math.ceil(w / 1000) + 's…', 'warn'); await sleep(w, signal); continue;
+      if (rec) rec.keyIndex = -1;
+      if (!rec || Date.now() - S.par.lastWaitLog > 4000) { if (rec) S.par.lastWaitLog = Date.now(); log('Đang chờ key sẵn sàng ' + Math.ceil(w / 1000) + 's…', 'warn'); }
+      await sleep(w, signal); continue;
     }
-    var meta = ST().keyMeta[k];
-    try { return await oneRequest(prompt, k, signal); }
+    var meta = ST().keyMeta[k], ev = null;
+    if (rec) { rec.keyIndex = k; rec.attempt = (rec.attempt || 0) + 1; ev = reqBegin(rec, k); }
+    try { var out = await oneRequest(prompt, k, signal); if (ev) reqEnd(ev, 'ok'); if (rec) rec.avoid = -1; return out; }
     catch (e) {
+      if (ev) reqEnd(ev, e.aborted ? 'abort' : (e.status || 'err'));
       if (e.aborted) throw e;
+      if (rec) rec.avoid = k;
       last = e; meta.errors = (meta.errors || 0) + 1;
       if (e.status === 429) {
         meta.c429 = (meta.c429 || 0) + 1; meta.status = 'ratelimited';
         meta.rateLimitUntil = Date.now() + (e.retryAfter ? e.retryAfter * 1000 : Math.min(120000, 15000 * Math.min(4, ++rate)));
         if (++rate > S.cfg.maxRateRetries) { e.final = true; throw e; }
-        log('429 — đổi key/chờ rồi thử lại', 'warn'); continue;
+        log('429 ở key C' + (k + 1) + ' — cooldown key này, batch chuyển sang key khác', 'warn'); continue;
       }
       if (e.status === 401 || e.status === 403) {
         meta.c401 = (meta.c401 || 0) + 1; meta.status = 'error';
-        log('Key bị từ chối (' + e.status + ') — loại khỏi pool', 'err');
+        log('Key C' + (k + 1) + ' bị từ chối (' + e.status + ') — loại khỏi pool', 'err');
         if (!usable()) { e.fatal = true; throw e; } continue;
       }
       if (isPayloadErr(e)) { e.payload = true; throw e; }
       if (e.status === 404) { e.fatal = true; throw e; }
       if (++attempt >= S.cfg.maxAttempts) { e.final = true; throw e; }
       var back = Math.min(60000, S.cfg.backoffBase * Math.pow(2, attempt - 1)) + Math.floor(Math.random() * 500);
-      log((e.message || 'Lỗi') + ' — thử lại lần ' + (attempt + 1) + ' sau ' + Math.ceil(back / 1000) + 's', 'warn');
+      log((e.message || 'Lỗi') + ' (key C' + (k + 1) + ') — thử lại lần ' + (attempt + 1) + ' sau ' + Math.ceil(back / 1000) + 's', 'warn');
       await sleep(back, signal);
     }
   }
 }
 
 /* ---- đọc 1 mảnh văn bản -> delta (tự chia đôi nếu quá dài/bị cắt) ---- */
-async function readPiece(b, text, ctxJson, chapterList, depth, label) {
+async function readPiece(b, text, ctxJson, chapterList, depth, label, rec) {
   var prompt = sfSumBuildBatchPrompt(ctxJson, b, chapterList, label, text), parsed = null, lastE = null;
   for (var t = 0; t < 3; t++) {
     try {
-      var r = await callAI(prompt, S.ac.signal);
+      var r = await callAI(prompt, S.ac.signal, rec);
       if (r.finish === 'length') { var et = new Error('Đầu ra bị cắt (length)'); et.truncated = true; throw et; }
       parsed = sfSumParseJSON(r.content);
       if (parsed.truncated) { var et2 = new Error('JSON bị cắt'); et2.truncated = true; et2.partial = parsed.value; throw et2; }
@@ -7722,7 +7807,7 @@ async function readPiece(b, text, ctxJson, chapterList, depth, label) {
     if (depth < 4 && text.length > 3000) {
       var mid = sfSumSplitRange(text, 0, text.length, Math.ceil(text.length / 2) + 1), out = [];
       log('Chia đôi phần này (' + text.length + ' ký tự) để AI xử lý trọn vẹn', 'warn');
-      for (var i = 0; i < mid.length; i++) out = out.concat(await readPiece(b, text.slice(mid[i][0], mid[i][1]), ctxJson, chapterList, depth + 1, 'phần con ' + (i + 1) + '/' + mid.length));
+      for (var i = 0; i < mid.length; i++) out = out.concat(await readPiece(b, text.slice(mid[i][0], mid[i][1]), ctxJson, chapterList, depth + 1, 'phần con ' + (i + 1) + '/' + mid.length, rec));
       return out;
     }
     if (lastE.partial) { log('Chấp nhận JSON đã cứu một phần (không thể chia nhỏ hơn)', 'warn'); return [lastE.partial]; }
@@ -7737,12 +7822,29 @@ async function saveJob(sumsToSave) {
   await storeObj().saveProgress(j, sumsToSave || []);
 }
 
-async function processBatch(i) {
+/* ------------------------------------------------------------------
+   PARALLEL SUMMARY — kiến trúc (thay cho vòng `for { await processBatch }` tuần tự cũ)
+
+     SOURCE → batch i ─► extractBatch(i)  ─► j.results[i] (delta thô, lưu riêng từng batch)
+              (N worker song song, mỗi request 1 key)         │
+                                                               ▼
+                                          flushMerge(): CHỈ merge batch j.currentBatch, +1, +1 …
+                                          (tuần tự theo batchIndex) ─► Story Memory (S.mem)
+
+   • extractBatch KHÔNG ghi S.mem / S.sums (chỉ đọc snapshot ngữ cảnh lúc giao batch) -> không race.
+   • applyBatch (merge) chỉ chạy trong flushMerge, đồng bộ (không await) -> không thể xen kẽ.
+   • j.currentBatch = số batch ĐÃ GỘP liên tiếp từ 0; j.results = batch xong nhưng chưa tới lượt gộp.
+------------------------------------------------------------------- */
+function extractBatch(i, rec) { // phần ĐỌC/ANALYZE (song song được). Không đụng S.mem/S.sums ngoài việc đọc ngữ cảnh.
   var b = S.plan.batches[i], text = sfSumBatchText(S.text, b), m = S.mem;
   var recent = []; for (var q = b.idxStart - 1; q >= 0 && recent.length < 2; q--) { if (S.sums.has(q)) recent.unshift({ chapter: S.plan.chapters[q].no, summary: S.sums.get(q).slice(0, 400) }); }
-  var ctxJson = sfSumBuildContext(m, text, S.cfg.ctxChars, { recentSummaries: recent });
+  var ctxJson = sfSumBuildContext(m, text, S.cfg.ctxChars, { recentSummaries: recent }); // snapshot: Memory đã gộp tới thời điểm giao batch
   var chs = []; for (var c = b.idxStart; c <= b.idxEnd && chs.length < 200; c++) chs.push(S.plan.chapters[c].no + ': ' + S.plan.chapters[c].title);
-  var deltas = await readPiece(b, text, ctxJson, chs.join('\n') + (b.partial ? '\n(chương này dài, được chia thành nhiều phần)' : ''), 0, b.partial ? 'đây là một PHẦN của chương' : '');
+  return readPiece(b, text, ctxJson, chs.join('\n') + (b.partial ? '\n(chương này dài, được chia thành nhiều phần)' : ''), 0, b.partial ? 'đây là một PHẦN của chương' : '', rec);
+}
+
+function applyBatch(i, deltas) { // phần MERGE (logic cũ của processBatch). CHỈ gọi tuần tự theo batchIndex từ flushMerge.
+  var b = S.plan.batches[i], m = S.mem;
   var newSums = [], warnings = [], seenNow = new Set();
   deltas.forEach(function (d) {
     var nd = sfSumNormalizeDelta(d);
@@ -7767,50 +7869,116 @@ async function processBatch(i) {
   return { sums: newSums, warnings: warnings };
 }
 
+async function saveJob(sumsToSave) {
+  var j = S.job; j.updatedAt = Date.now();
+  j.storyMemory = S.mem;
+  await storeObj().saveProgress(j, sumsToSave || []);
+}
+function jsonClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// Bounded worker pool. Trả { halt, saveErr }. Không throw (lỗi được gom vào halt) để sfSumRun xử lý tập trung.
+async function runPool(j) {
+  var P = S.par, total = S.plan.batches.length, running = new Map(), tasks = new Set();
+  var notBefore = {}, rounds = {}, lastKey = {}, sumQ = [];
+  var halt = null, saveErr = null, saving = null, dirty = false, wakeFn = null, lastProg = 0;
+  var win = Math.max(8, Math.max(1, Math.min(20, parseInt(S.cfg.parallel, 10) || CFG_DEFAULT.parallel)) * Math.max(1, S.cfg.lookahead || 6));
+  P.startedAt = Date.now();
+
+  function wake() { if (wakeFn) { var f = wakeFn; wakeFn = null; f(); } }
+  function nextIdx() { // batch nhỏ nhất chưa xong/chưa chạy trong cửa sổ -> batch lỗi (nhỏ hơn) luôn được ưu tiên chạy lại trước
+    var now = Date.now(), hi = Math.min(total, j.currentBatch + win);
+    for (var i = j.currentBatch; i < hi; i++) { if (j.results[i] || running.has(i)) continue; if (notBefore[i] && notBefore[i] > now) continue; return i; }
+    return -1;
+  }
+  function flushMerge() { // gộp theo batchIndex tăng dần, đồng bộ hoàn toàn
+    while (j.currentBatch < total && j.results[j.currentBatch]) {
+      var i = j.currentBatch, res = applyBatch(i, j.results[i].deltas);
+      delete j.results[i]; j.currentBatch = i + 1; j.processedChapters = S.plan.batches[i].idxEnd + 1;
+      if (res.warnings.length) j.warnings = (j.warnings || []).concat(res.warnings).slice(-300);
+      res.sums.forEach(function (x) { sumQ.push(x); });
+      if (j.currentBatch >= total || j.currentBatch % S.cfg.compressEvery === 0) { var cs = sfSumCompress(S.mem, { softLimit: S.cfg.memSoftLimit }); log('Nén Memory: ' + cs.before + ' → ' + cs.after + ' ký tự'); }
+    }
+    if (j.currentBatch >= total) j.status = 'done';
+  }
+  function save() { dirty = true; if (!saving) saving = drain(); }
+  async function drain() { // 1 lần ghi tại một thời điểm, gộp các yêu cầu lưu dồn lại; snapshot lấy ĐỒNG BỘ nên luôn nhất quán (memory + results + summaries)
+    try {
+      await Promise.resolve(); // đảm bảo `saving` đã được gán trước khi finally chạy
+      while (dirty && !saveErr) {
+        dirty = false;
+        var snap = jsonClone(Object.assign({}, j, { storyMemory: S.mem, updatedAt: Date.now() })), sums = sumQ.splice(0);
+        await storeObj().saveProgress(snap, sums);
+      }
+    } catch (e) { saveErr = e; }
+    finally { saving = null; wake(); }
+  }
+  function launch(i) {
+    var rec = { batch: i, keyIndex: -1, attempt: 0, startedAt: Date.now(), avoid: lastKey[i] === undefined ? -1 : lastKey[i] };
+    running.set(i, rec); P.active.set(i, rec);
+    if (P.active.size > P.peakBatches) P.peakBatches = P.active.size;
+    var t = (async function () {
+      var deltas = null;
+      try { deltas = await extractBatch(i, rec); }
+      catch (e) {
+        if (e.aborted) return;
+        if (e.fatal) { halt = halt || e; return; }
+        rounds[i] = (rounds[i] || 0) + 1; P.retries++; lastKey[i] = rec.keyIndex;
+        if (rounds[i] >= S.cfg.maxBatchRounds) { P.failedSet.add(i); halt = halt || e; log('Batch ' + (i + 1) + ' lỗi sau ' + rounds[i] + ' lượt: ' + (e.message || e), 'err'); }
+        else { notBefore[i] = Date.now() + 1500 * rounds[i]; log('Batch ' + (i + 1) + ' lỗi (' + (e.message || e) + ') — trả lại hàng đợi, thử lại bằng key khác', 'warn'); }
+        return;
+      } finally { running.delete(i); P.active.delete(i); wake(); }
+      // batch xong: lưu kết quả RIÊNG theo batchIndex, rồi gộp những batch liên tiếp đã sẵn sàng
+      j.results[i] = { status: 'done', deltas: deltas, keyIndex: rec.keyIndex, attempt: rec.attempt, startedAt: rec.startedAt, finishedAt: Date.now() };
+      P.lastDone[rec.keyIndex] = { batch: i, at: Date.now() };
+      try { flushMerge(); } catch (me) { me.final = true; me.saveFail = true; halt = halt || me; return; }
+      save(); wake();
+    })();
+    tasks.add(t); t.then(function () { tasks.delete(t); progress(); });
+  }
+
+  while (j.currentBatch < total && !S.stop && !halt && !saveErr) {
+    var eff = effectiveConcurrency();
+    while (running.size < eff && !S.stop && !halt) { var i = nextIdx(); if (i < 0) break; launch(i); } // worker nào xong -> vòng này giao NGAY batch kế tiếp, không chờ worker chậm
+    var now2 = Date.now(); if (now2 - lastProg > 400) { lastProg = now2; progress(); }
+    await new Promise(function (r) { wakeFn = r; setTimeout(r, 250); });
+  }
+  while (tasks.size) await Promise.all(Array.from(tasks)); // chờ request đang bay (đã bị huỷ nếu Dừng); kết quả xong được giữ lại
+  try { if (!saveErr) flushMerge(); } catch (me2) { me2.final = true; me2.saveFail = true; halt = halt || me2; }
+  save(); while (saving) await saving;
+  return { halt: halt, saveErr: saveErr };
+}
+
 async function sfSumRun(opts) {
   opts = opts || {};
   if (S.running) return { ok: false, reason: 'busy' };
   if (!S.job || !S.plan) return { ok: false, reason: 'no-job' };
   if (IS_TRANSLATING() && !opts.force) return { ok: false, reason: 'translating' };
   if (!hasKeys() || !ST().model || !(typeof root.chatUrl === 'function' && root.chatUrl())) return { ok: false, reason: 'no-api' };
-  S.running = true; S.stop = false; S.ac = new AbortController();
-  var j = S.job; j.status = 'running'; j.lastError = '';
-  var processedThisRun = 0;
+  S.running = true; S.stop = false; S.ac = new AbortController(); S.par = newPar();
+  var j = S.job; j.status = 'running'; j.lastError = ''; j.results = j.results || {}; j.keyStats = j.keyStats || {};
+  var before = j.currentBatch;
   try {
-    while (j.currentBatch < S.plan.batches.length) {
-      if (S.stop) { j.status = 'paused'; break; }
-      var i = j.currentBatch;
-      progress();
-      log('Đọc batch ' + (i + 1) + '/' + S.plan.batches.length + ' (chương ' + S.plan.batches[i].chapterStart + '–' + S.plan.batches[i].chapterEnd + ')');
-      var res = await processBatch(i);
-      j.currentBatch = i + 1;
-      j.processedChapters = S.plan.batches[i].idxEnd + 1;
-      if (res.warnings.length) j.warnings = (j.warnings || []).concat(res.warnings).slice(-300);
-      processedThisRun++;
-      var last = j.currentBatch >= S.plan.batches.length;
-      if (last || j.currentBatch % S.cfg.compressEvery === 0) { var cs = sfSumCompress(S.mem, { softLimit: S.cfg.memSoftLimit }); log('Nén Memory: ' + cs.before + ' → ' + cs.after + ' ký tự'); }
-      if (last) j.status = 'done';
-      try { await saveJob(res.sums); }
-      catch (se) { j.currentBatch = i; throw Object.assign(new Error('Không lưu được tiến độ: ' + se.message), { final: true, saveFail: true }); }
-      progress();
-    }
-    if (j.status === 'running') j.status = 'done';
-    if (j.status === 'done' || j.status === 'paused') { try { await saveJob([]); } catch (e) {} }
-    return { ok: true, status: j.status, processedThisRun: processedThisRun };
+    log('Bắt đầu đọc song song: tối đa ' + effectiveConcurrency() + ' request đồng thời (' + keyAvailCount() + ' key khả dụng, trần ' + S.cfg.parallel + ')');
+    var out = await runPool(j);
+    if (out.saveErr) throw Object.assign(new Error('Không lưu được tiến độ: ' + out.saveErr.message), { final: true, saveFail: true });
+    if (out.halt) throw out.halt;
+    if (j.currentBatch >= S.plan.batches.length) j.status = 'done'; else if (S.stop) j.status = 'paused'; else j.status = 'error';
+    try { await saveJob([]); } catch (e) {}
+    return { ok: true, status: j.status, processedThisRun: j.currentBatch - before };
   } catch (e) {
-    if (e.aborted) { j.status = 'paused'; try { await saveJob([]); } catch (x) {} return { ok: true, status: 'paused', processedThisRun: processedThisRun }; }
-    // Batch lỗi: KHÔNG đánh dấu done; currentBatch giữ nguyên; memory đã lưu của batch trước còn nguyên.
+    if (e.aborted) { j.status = 'paused'; try { await saveJob([]); } catch (x) {} return { ok: true, status: 'paused', processedThisRun: j.currentBatch - before }; }
+    // Batch lỗi: KHÔNG đánh dấu done; kết quả các batch đã xong (đã gộp / đang chờ tới lượt gộp) vẫn được giữ.
     j.status = 'error'; j.lastError = e.message || String(e);
-    if (e.saveFail) { // merge đã áp vào RAM nhưng DB chưa nhận -> nạp lại từ DB để retry không merge đôi
+    if (e.saveFail) { // RAM có thể đã đi trước DB -> nạp lại từ DB để lần chạy sau không merge đôi / không mất batch
       try {
         var again = await storeObj().getJob(j.id);
         S.mem = again && again.storyMemory ? indexMemory(again.storyMemory) : newMemory();
         S.sums = new Map(); (await storeObj().getSums(j.id)).forEach(function (x) { S.sums.set(x.idx, x.text); });
-        j.currentBatch = again ? again.currentBatch : 0; j.processedChapters = again ? again.processedChapters : 0;
+        j.currentBatch = again ? again.currentBatch : 0; j.processedChapters = again ? again.processedChapters : 0; j.results = again && again.results ? again.results : {};
       } catch (x) {}
     }
-    j.storyMemory = S.mem; try { await storeObj().saveProgress(Object.assign({}, j, { updatedAt: Date.now() }), []); } catch (x) {}
-    log('Lỗi ở batch ' + (j.currentBatch + 1) + ': ' + j.lastError + ' — bấm Tiếp tục để chỉ thử lại batch này', 'err');
+    j.storyMemory = S.mem; try { await storeObj().saveProgress(jsonClone(Object.assign({}, j, { updatedAt: Date.now() })), []); } catch (x) {}
+    log('Lỗi: ' + j.lastError + ' — bấm Tiếp tục để chỉ chạy lại các batch chưa xong (batch đã xong được giữ nguyên)', 'err');
     return { ok: false, reason: 'error', error: j.lastError, batch: j.currentBatch };
   } finally { S.running = false; S.ac = null; progress(); }
 }
@@ -7826,13 +7994,17 @@ async function sfSumPrepare(text, opts) {
   if (existing && existing.sourceHash === S.hash && existing.storyMemory && existing.totalBatches === S.plan.batches.length) {
     S.job = existing; S.mem = indexMemory(existing.storyMemory);
     if (S.job.status === 'running') S.job.status = 'paused';
+    // RESUME: batch < currentBatch = đã GỘP; j.results = đã xong nhưng chưa tới lượt gộp (giữ nguyên); mọi batch khác (kể cả đang chạy dở khi đóng trình duyệt) = pending
+    S.job.results = S.job.results && typeof S.job.results === 'object' ? S.job.results : {}; S.job.keyStats = S.job.keyStats || {};
+    Object.keys(S.job.results).forEach(function (k) { var n = +k; if (!(n >= S.job.currentBatch && n < S.plan.batches.length) || !S.job.results[k] || !Array.isArray(S.job.results[k].deltas)) delete S.job.results[k]; });
+    S.par = newPar();
     (await storeObj().getSums(id)).forEach(function (x) { S.sums.set(x.idx, x.text); });
     S.mem.chapterSummaries = [];
     return { resumed: true, job: S.job };
   }
-  S.mem = newMemory();
+  S.mem = newMemory(); S.par = newPar();
   S.job = { id: id, fileId: CUR_FILE_ID(), sourceHash: S.hash, status: 'ready',
-    currentBatch: 0, totalBatches: S.plan.batches.length, processedChapters: 0, params: { batchChars: bc }, storyMemory: S.mem,
+    currentBatch: 0, totalBatches: S.plan.batches.length, processedChapters: 0, params: { batchChars: bc }, storyMemory: S.mem, results: {}, keyStats: {},
     startedAt: Date.now(), updatedAt: Date.now(), lastError: '', warnings: [] };
   return { resumed: false, job: S.job };
 }
@@ -7943,6 +8115,7 @@ var api = { CFG_DEFAULT: CFG_DEFAULT, S: S, norm: norm, sfSumParseChapters: sfSu
   sfSumMergeDelta: sfSumMergeDelta, sfSumCompress: sfSumCompress, sfSumBuildContext: sfSumBuildContext, sfSumParseJSON: sfSumParseJSON,
   sfSumPrepare: sfSumPrepare, sfSumRun: sfSumRun, sfSumReset: sfSumReset, sfSumAsk: sfSumAsk, sfSumCompile: sfSumCompile, sfSumParseRange: sfSumParseRange,
   sfSumIntent: sfSumIntent, sfSumLocalView: sfSumLocalView, makeMemStore: makeMemStore, makeIdbStore: makeIdbStore, snapshot: snapshot, counts: counts,
+  effectiveConcurrency: effectiveConcurrency, keyAvailCount: keyAvailCount, runPool: runPool,
   stop: function () { S.stop = true; if (S.ac) S.ac.abort(); } };
 root.SFSum = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -7969,6 +8142,7 @@ function readCfg() {
   S.cfg.batchChars = intVal('sfSumBatchChars', 20000, 3000, 200000);
   S.cfg.compressEvery = intVal('sfSumCompressEvery', 10, 1, 1000);
   S.cfg.ctxChars = intVal('sfSumCtxChars', 14000, 3000, 60000);
+  S.cfg.parallel = intVal('sfSumParallel', 7, 1, 20);
 }
 function render(s) {
   s = s || SFSum.snapshot();
@@ -8000,6 +8174,21 @@ function render(s) {
   $('sfSumExportBtn').disabled = s.status === 'none' || !s.counts.characters && !s.counts.events;
   var canAll = s.status === 'done'; $('sfSumModeAll').title = canAll ? '' : 'Chỉ chạy sau khi đã đọc hết file';
   $('sfSumModeAll').style.opacity = canAll ? '' : '.55';
+  renderPar(s);
+}
+function renderPar(s) {
+  var box = $('sfSumPar'); if (!box) return; var p = s.par;
+  if (!p || s.status === 'none' || !p.keys) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  var wl = { running: 'đang xử lý', done: '✓', idle: 'rảnh', cooldown: 'cooldown 429', off: 'tắt/lỗi key' };
+  var h = '<div class="sfsum-parhead">🤖 Summary Engine <span>· Parallel: <b>' + p.effective + ' / ' + p.limit + '</b> (' + p.keysAvailable + '/' + p.keys + ' key khả dụng' + (p.waitingForKey ? ', ' + p.waitingForKey + ' đang chờ key' : '') + ')</span></div>' +
+    '<div class="sfsum-parstats"><span>Completed: <b>' + fmt(p.completed) + ' / ' + fmt(s.totalBatches) + '</b></span><span>Running: <b>' + p.running + '</b></span><span>Pending: <b>' + fmt(p.pending) + '</b></span><span>Failed: <b>' + p.failed + '</b></span>' +
+    (p.heldForOrder ? '<span>Chờ tới lượt gộp: <b>' + p.heldForOrder + '</b></span>' : '') + (p.retries ? '<span>Retry: <b>' + p.retries + '</b></span>' : '') + '</div><div class="sfsum-workers">';
+  p.workers.forEach(function (w) {
+    h += '<div class="sfsum-w ' + w.state + '">C' + (w.key + 1) + ' → ' + (w.batch >= 0 ? 'Batch ' + fmt(w.batch + 1) : '—') + ' → ' + wl[w.state] + '</div>';
+  });
+  h += '</div><div class="sfsum-parkeys">' + p.workers.map(function (w) { return 'C' + (w.key + 1) + ': ' + w.requests + ' request'; }).join(' · ') + '</div>';
+  box.innerHTML = h;
 }
 S.onLog = log; S.onProgress = render;
 
@@ -8097,6 +8286,7 @@ $('sfSumModeEvents').onclick = function () { localView('events', '⚡ Sự kiệ
 $('sfSumModeSecrets').onclick = function () { localView('secrets', '🔮 Bí mật / 伏笔 / việc chưa giải quyết'); };
 $('sfSumModeTimeline').onclick = function () { localView('timeline', '🕰 Timeline'); };
 $('sfSumModeRel').onclick = function () { localView('relations', '🔗 Quan hệ nhân vật'); };
+$('sfSumParallel').addEventListener('change', function () { readCfg(); render(); });
 $('sfSumBatchChars').addEventListener('change', function () { if (S.job && S.job.currentBatch === 0 && !S.running) refreshSource(true); });
 var nav = $('sfSumNav'); if (nav) nav.onclick = function () { $('sfSumCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
