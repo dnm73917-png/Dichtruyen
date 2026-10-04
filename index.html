@@ -413,6 +413,31 @@
     .read-overlay{padding:0;}
     .read-modal{max-height:100vh; height:100vh; border-radius:0;}
   }
+  /* ===== CHATBOT TRUYỆN (Summary Engine) ===== */
+  .sfsum-pill{font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; background:#23274a; color:var(--text-dim);}
+  .sfsum-pill.run{background:#1c3a5a; color:#7ab8ff;} .sfsum-pill.done{background:#12382b; color:var(--green);}
+  .sfsum-pill.error{background:#3d1d1d; color:var(--red);} .sfsum-pill.paused,.sfsum-pill.ready{background:#3a3016; color:var(--amber);}
+  .sfsum-row{display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 2px; font-size:12.5px; color:var(--text-dim);}
+  .sfsum-row label{display:flex; align-items:center; gap:6px;}
+  .sfsum-row input[type=number], .sfsum-range input[type=number]{width:92px; padding:5px 7px; background:var(--input-bg); color:var(--text); border:1px solid var(--panel-border); border-radius:8px;}
+  .sfsum-range input[type=number]{width:70px;}
+  .sfsum-info{margin:12px 0 8px; font-size:12.5px; color:var(--text-dim); line-height:1.5;}
+  .sfsum-bar{height:8px; border-radius:6px; background:#1b1f38; overflow:hidden;}
+  #sfSumBarFill{height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s;}
+  .sfsum-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin:10px 0;}
+  .sfsum-stats div{background:var(--input-bg); border:1px solid var(--panel-border); border-radius:9px; padding:7px 10px; font-size:13px;}
+  .sfsum-stats b{display:block; font-size:10.5px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; margin-bottom:2px;}
+  .sfsum-details summary{cursor:pointer; font-size:12px; color:var(--text-dim);}
+  .sfsum-log{max-height:150px; overflow:auto; font:11px/1.5 ui-monospace,Consolas,monospace; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:8px; padding:6px 8px; margin-top:6px;}
+  .sfsum-logrow.warn{color:var(--amber);} .sfsum-logrow.err{color:var(--red);}
+  .sfsum-modes{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0 10px;}
+  .sfsum-range{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-dim);}
+  .sfsum-chat{max-height:380px; min-height:90px; overflow:auto; background:var(--input-bg); border:1px solid var(--panel-border); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px;}
+  .sfsum-msg{padding:8px 11px; border-radius:10px; font-size:13px; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-width:92%;}
+  .sfsum-msg.user{align-self:flex-end; background:#2a2560; color:#e9e6ff;} .sfsum-msg.bot{align-self:flex-start; background:#171b33; border:1px solid var(--panel-border);}
+  .sfsum-hint{font-size:12px; color:var(--text-dim); line-height:1.5;}
+  .sfsum-inputrow{display:flex; gap:8px; margin-top:8px; align-items:flex-end;}
+  .sfsum-inputrow textarea{flex:1; padding:8px 10px; background:var(--input-bg); color:var(--text); border:1px solid var(--panel-border); border-radius:10px; font:inherit; font-size:13px;}
 </style>
 </head>
 <body>
@@ -437,6 +462,7 @@
     <div class="navitem disabled"><span class="ic">🧪</span> Lab Lite</div>
     <div class="navitem disabled"><span class="ic">💬</span> Chat tự do</div>
     <div class="navitem active"><span class="ic">🈯</span> Dịch truyện</div>
+    <div class="navitem" id="sfSumNav" style="cursor:pointer;"><span class="ic">🤖</span> Chatbot truyện</div>
     <div class="navitem disabled"><span class="ic">✨</span> Prompt tổng quát</div>
     <div class="navitem disabled"><span class="ic">👑</span> Tài khoản &amp; VIP</div>
     <div class="navitem disabled"><span class="ic">☁️</span> Cloud Sync</div>
@@ -874,6 +900,43 @@
         </div>
         <input type="file" id="fileInput" accept=".txt,text/plain"
           style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; -webkit-appearance:none;">
+      </div>
+    </div>
+
+    <!-- ===== CHATBOT TRUYỆN — Summary Engine (module độc lập, không đụng hệ thống dịch) ===== -->
+    <div class="card" id="sfSumCard">
+      <h2>🤖 Chatbot truyện <span class="sfsum-pill none" id="sfSumPill">chưa có file</span></h2>
+      <p class="sub">Đọc tuần tự TOÀN BỘ file truyện (chia batch theo chương, không giới hạn số chương/batch), xây Story Memory rồi tóm tắt &amp; trả lời. Độc lập với hệ thống dịch, dùng chung API Key Pool. Tự lưu sau mỗi batch, đóng trình duyệt vẫn tiếp tục được.</p>
+      <div class="sfsum-row">
+        <label>Ký tự / batch <input type="number" id="sfSumBatchChars" min="3000" max="200000" step="1000" value="20000"></label>
+        <label>Nén Memory mỗi <input type="number" id="sfSumCompressEvery" min="1" max="1000" value="10"> batch</label>
+        <label>Context Memory (ký tự) <input type="number" id="sfSumCtxChars" min="3000" max="60000" step="1000" value="14000"></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="sfSumStartBtn" disabled>▶ Bắt đầu đọc</button>
+        <button class="btn" id="sfSumStopBtn" style="display:none;">⏸ Dừng</button>
+        <button class="btn small danger" id="sfSumResetBtn" disabled>🔁 Đọc lại từ đầu</button>
+        <button class="btn small" id="sfSumExportBtn" disabled>⬇ Xuất Story Memory</button>
+      </div>
+      <div class="sfsum-info" id="sfSumInfo"></div>
+      <div class="sfsum-bar"><div id="sfSumBarFill"></div></div>
+      <div class="sfsum-stats" id="sfSumStats"></div>
+      <details class="sfsum-details"><summary>Nhật ký đọc</summary><div id="sfSumLog" class="sfsum-log"></div></details>
+
+      <div class="sfsum-modes">
+        <button class="btn small" id="sfSumModeAll">📚 Tóm tắt toàn bộ</button>
+        <span class="sfsum-range">chương <input type="number" id="sfSumFrom" min="0" placeholder="từ"> – <input type="number" id="sfSumTo" min="0" placeholder="đến"> <button class="btn small" id="sfSumModeRange">Tóm tắt khoảng chương</button></span>
+        <button class="btn small" id="sfSumModePlot">📖 Cốt truyện</button>
+        <button class="btn small" id="sfSumModeChars">👥 Nhân vật</button>
+        <button class="btn small" id="sfSumModeEvents">⚡ Sự kiện quan trọng</button>
+        <button class="btn small" id="sfSumModeSecrets">🔮 Bí mật / 伏笔</button>
+        <button class="btn small" id="sfSumModeTimeline">🕰 Timeline</button>
+        <button class="btn small" id="sfSumModeRel">🔗 Quan hệ</button>
+      </div>
+      <div class="sfsum-chat" id="sfSumChatBox"></div>
+      <div class="sfsum-inputrow">
+        <textarea id="sfSumInput" rows="2" placeholder="Hỏi về truyện… (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
+        <button class="btn primary" id="sfSumSendBtn">Gửi</button>
       </div>
     </div>
 
@@ -6934,6 +6997,1113 @@ sfCloud.init();
   renderBar();
   setInterval(refreshActive, 800);
 })();
+</script>
+<script>
+/* =====================================================================
+   STORYFORGE — CHATBOT TRUYỆN / SUMMARY ENGINE (module độc lập)
+   ---------------------------------------------------------------------
+   KHÔNG đụng hệ thống dịch hiện có (scheduler, smart chunking, runEngine,
+   callModel, canon, cloud sync, trình xem...).
+   Summary Engine có plan/batch RIÊNG (offset-based) và DB RIÊNG
+   ('StoryForgeSummary'), chỉ DÙNG LẠI (đọc/gọi): state.keys/keyMeta,
+   pickAvailableKey, recordKeyCall, getNearestCooldownMs, hasUsableKey,
+   chatUrl, wrapUrl, sf_getFullSourceText, sf_computeSourceHash.
+   Engine đọc KHÔNG có bất kỳ giới hạn số lượng batch nào: vòng lặp đi 0 → END.
+   ===================================================================== */
+(function (root) {
+'use strict';
+
+var EV_KEY_LEN = 96, DESC_SHORT = 110;
+var CFG_DEFAULT = { batchChars: 20000, ctxChars: 14000, compressEvery: 10,
+  maxAttempts: 6, maxRateRetries: 60, backoffBase: 1500, timeoutMs: 240000, memSoftLimit: 900000 };
+
+/* ------------------------------ utils ------------------------------ */
+function sleep(ms, signal) {
+  return new Promise(function (res, rej) {
+    if (signal && signal.aborted) { var e0 = new Error('Đã huỷ'); e0.aborted = true; return rej(e0); }
+    var t = setTimeout(function () { if (signal) signal.removeEventListener('abort', on); res(); }, ms);
+    function on() { clearTimeout(t); var e = new Error('Đã huỷ'); e.aborted = true; rej(e); }
+    if (signal) signal.addEventListener('abort', on, { once: true });
+  });
+}
+function norm(s) { return String(s == null ? '' : s).normalize('NFC').toLowerCase().replace(/[\s\u3000]+/g, ' ').trim(); }
+function str(v, max) { if (v == null) return ''; var s = String(v).trim(); return max && s.length > max ? s.slice(0, max) : s; }
+function arr(v) { return Array.isArray(v) ? v : []; }
+function toks(s) {
+  var n = norm(s);
+  if (/[\u3400-\u9fff]/.test(n)) { var o = new Set(); var c = n.replace(/\s/g, ''); for (var i = 0; i < c.length - 1; i++) o.add(c.substr(i, 2)); return o; }
+  return new Set(n.match(/[\p{L}\p{N}]+/gu) || []);
+}
+function jaccard(a, b) {
+  var A = toks(a), B = toks(b); if (!A.size || !B.size) return 0;
+  var inter = 0; A.forEach(function (x) { if (B.has(x)) inter++; });
+  return inter / (A.size + B.size - inter);
+}
+function uniqPush(list, items, cap) {
+  var seen = new Set(list.map(norm));
+  items.forEach(function (it) { var s = str(it, 200); if (s && !seen.has(norm(s))) { list.push(s); seen.add(norm(s)); } });
+  if (cap && list.length > cap) list.splice(0, list.length - cap);
+}
+function safeCut(text, pos) { // không cắt giữa surrogate pair
+  if (pos > 0 && pos < text.length) {
+    var c = text.charCodeAt(pos), p = text.charCodeAt(pos - 1);
+    if (c >= 0xDC00 && c <= 0xDFFF && p >= 0xD800 && p <= 0xDBFF) return pos - 1;
+  }
+  return pos;
+}
+function fnv(text) { var h = 0x811c9dc5; for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(36); }
+function hashOf(text) { return (typeof root.sf_computeSourceHash === 'function') ? root.sf_computeSourceHash(text) : (fnv(text) + '_' + text.length); }
+
+/* ------------------------- 1. CHAPTER PARSER ------------------------- */
+var CH_RE = /^[ \t\u3000]*(?:第\s*([0-9０-９零〇一二两三四五六七八九十百千万]+)\s*[章回節节]|Chương\s+thứ\s+(nhất)\b|Chương\s*(?:thứ\s*)?:?\s*0*(\d+)\b|Chapter\s*:?\s*0*(\d+)\b|Ch\.\s*0*(\d+)\b)/i;
+function cnToNum(s) {
+  s = String(s).replace(/[０-９]/g, function (d) { return String.fromCharCode(d.charCodeAt(0) - 0xFEE0); });
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  var dg = { '零': 0, '〇': 0, '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+  var un = { '十': 10, '百': 100, '千': 1000 }, total = 0, sec = 0, num = 0;
+  for (var k = 0; k < s.length; k++) {
+    var ch = s[k];
+    if (ch in dg) num = dg[ch];
+    else if (ch in un) { sec += (num || 1) * un[ch]; num = 0; }
+    else if (ch === '万') { total += (sec + num) * 10000; sec = 0; num = 0; }
+    else return NaN;
+  }
+  return total + sec + num;
+}
+function sfSumParseChapters(text) {
+  var heads = [], len = text.length, pos = 0;
+  while (pos < len) {
+    var nl = text.indexOf('\n', pos); if (nl === -1) nl = len;
+    if (nl - pos <= 200) {
+      var line = text.slice(pos, nl), m = CH_RE.exec(line);
+      if (m) {
+        var no = m[1] ? cnToNum(m[1]) : m[2] ? 1 : m[3] ? parseInt(m[3], 10) : m[4] ? parseInt(m[4], 10) : parseInt(m[5], 10);
+        if (Number.isFinite(no)) heads.push({ no: no, title: line.trim().slice(0, 120), start: pos });
+      }
+    }
+    pos = nl + 1;
+  }
+  var chapters = [];
+  if (!heads.length) return { chapters: chapters, mode: 'virtual' };
+  if (heads[0].start > 0) {
+    if (text.slice(0, heads[0].start).trim().length > 0) chapters.push({ no: 0, title: '(Mở đầu)', start: 0 });
+    else heads[0].start = 0;
+  }
+  heads.forEach(function (h) { chapters.push({ no: h.no, title: h.title, start: h.start }); });
+  for (var i = 0; i < chapters.length; i++) {
+    chapters[i].idx = i;
+    chapters[i].end = i + 1 < chapters.length ? chapters[i + 1].start : len;
+  }
+  return { chapters: chapters, mode: 'headers' };
+}
+
+/* ------------------- 2. SPLIT RANGE (para > sentence > hard) ------------------- */
+function sfSumSplitRange(text, s, e, max) {
+  var out = [], pos = s;
+  while (e - pos > max) {
+    var target = pos + max, lower = pos + Math.floor(max * 0.5), cut = -1, line = -1, i;
+    for (i = target; i > lower; i--) {
+      if (text.charCodeAt(i - 1) === 10) {
+        if (line < 0) line = i;
+        var p1 = text.charCodeAt(i - 2), p2 = text.charCodeAt(i - 3);
+        if (p1 === 10 || (p1 === 13 && p2 === 10)) { cut = i; break; }
+      }
+    }
+    if (cut < 0) cut = line;
+    if (cut < 0) {
+      for (i = target; i > lower; i--) {
+        var ch = text[i - 1];
+        if (ch === '。' || ch === '！' || ch === '？' || ch === '…' || ((ch === '.' || ch === '!' || ch === '?') && /\s/.test(text[i] || ' '))) { cut = i; break; }
+      }
+    }
+    if (cut < 0) cut = safeCut(text, target);
+    if (cut <= pos) cut = Math.min(e, pos + Math.max(1, max));
+    out.push([pos, cut]); pos = cut;
+  }
+  if (pos < e || !out.length) out.push([pos, e]);
+  return out;
+}
+
+/* ------------------------- 3. SUMMARY CHUNKER ------------------------- */
+function sfSummaryChunker(text, chapters, maxChars) {
+  var batches = [], accStart = -1, accEnd = -1, a0 = null, a1 = null;
+  function push(so, eo, c0, c1, partial) {
+    batches.push({ index: batches.length, totalBatches: 0, chapterStart: c0.no, chapterEnd: c1.no,
+      idxStart: c0.idx, idxEnd: c1.idx, startOffset: so, endOffset: eo, partial: !!partial, length: eo - so });
+  }
+  function flush() { if (accStart >= 0) { push(accStart, accEnd, a0, a1, false); accStart = -1; } }
+  chapters.forEach(function (ch) {
+    if (ch.end - ch.start > maxChars) {
+      flush();
+      sfSumSplitRange(text, ch.start, ch.end, maxChars).forEach(function (r) { push(r[0], r[1], ch, ch, true); });
+    } else {
+      if (accStart >= 0 && (ch.end - accStart) > maxChars) flush();
+      if (accStart < 0) { accStart = ch.start; a0 = ch; }
+      accEnd = ch.end; a1 = ch;
+    }
+  });
+  flush();
+  batches.forEach(function (b) { b.totalBatches = batches.length; });
+  return batches;
+}
+function sfSumPlan(text, batchChars) {
+  var p = sfSumParseChapters(text), chapters = p.chapters, mode = p.mode;
+  if (!chapters.length && text.length) {
+    chapters = sfSumSplitRange(text, 0, text.length, batchChars).map(function (r, i) {
+      return { idx: i, no: i + 1, title: 'Phần ' + (i + 1), start: r[0], end: r[1], virtual: true };
+    });
+    mode = 'virtual';
+  }
+  var batches = sfSummaryChunker(text, chapters, batchChars);
+  return { chapters: chapters, batches: batches, mode: mode, batchChars: batchChars, textLength: text.length };
+}
+function sfSumBatchText(text, b) { return text.slice(b.startOffset, b.endOffset); }
+function sfSumVerifyCoverage(plan, textLen) { // chứng minh: các batch phủ liên tục 0 → END, không sót, không chồng
+  var pos = 0;
+  for (var i = 0; i < plan.batches.length; i++) {
+    var b = plan.batches[i];
+    if (b.startOffset !== pos || b.endOffset <= b.startOffset) return { ok: false, at: i };
+    pos = b.endOffset;
+  }
+  return { ok: pos === textLen, end: pos, batches: plan.batches.length };
+}
+
+/* --------------------------- 4. STORY MEMORY --------------------------- */
+function newMemory() {
+  var m = { version: 1, characters: [], relations: [], locations: [], organizations: [], powerSystems: [], items: [],
+    events: [], timeline: [], mysteries: [], foreshadowing: [], currentState: '', currentStateChapter: 0,
+    chapterSummaries: [], importantFacts: [], unresolvedThreads: [], resolvedThreads: [], contradictions: [],
+    lastChapterNo: 0, seq: 0, compressedAt: 0 };
+  indexMemory(m); return m;
+}
+function indexMemory(m) {
+  var ix = { chars: new Map(), rel: new Map(), ent: { locations: new Map(), organizations: new Map(), powerSystems: new Map(), items: new Map() },
+    ev: new Set(), facts: new Set(), contra: new Set() };
+  m.characters.forEach(function (c) { regChar(ix, c); });
+  m.relations.forEach(function (r) { ix.rel.set(r.a + '>' + r.b, r); });
+  ['locations', 'organizations', 'powerSystems', 'items'].forEach(function (k) { m[k].forEach(function (e) { ix.ent[k].set(norm(e.name), e); }); });
+  m.events.forEach(function (e) { ix.ev.add(evKey(e)); });
+  m.importantFacts.forEach(function (f) { ix.facts.add(norm(f.fact)); });
+  m.contradictions.forEach(function (c) { ix.contra.add(norm(c.text)); });
+  Object.defineProperty(m, '_ix', { value: ix, enumerable: false, writable: true, configurable: true });
+  return m;
+}
+function regChar(ix, c) { [c.name].concat(c.aliases || []).forEach(function (n) { var k = norm(n); if (k) ix.chars.set(k, c); }); }
+function evKey(e) { return e.chapter + '|' + norm(e.event).slice(0, EV_KEY_LEN); }
+function nid(m, p) { m.seq = (m.seq || 0) + 1; return p + m.seq; }
+function chapOf(v, ctx) {
+  var n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return { n: ctx.ce, guess: true };
+  if (n < ctx.cs) return { n: ctx.cs, guess: true };
+  if (n > ctx.ce) return { n: ctx.ce, guess: true };
+  return { n: n, guess: false };
+}
+function normStatus(s) {
+  s = norm(s); if (!s) return '';
+  if (/mất tích|biệt tích|missing/.test(s)) return 'missing';
+  if (/chết|hi sinh|tử vong|dead|died|killed/.test(s)) return 'dead';
+  if (/còn sống|sống|alive/.test(s)) return 'alive';
+  if (/unknown|không rõ|chưa rõ/.test(s)) return 'unknown';
+  return '';
+}
+function joinUniq(oldS, newS, cap) {
+  newS = str(newS, 600); if (!newS) return oldS || '';
+  if (!oldS) return newS;
+  if (norm(oldS).indexOf(norm(newS)) >= 0) return oldS;
+  if (jaccard(oldS, newS) > 0.85) return oldS;
+  var r = oldS + ' | ' + newS; return r.length > (cap || 900) ? r.slice(0, cap || 900) : r;
+}
+function addContra(m, text, chapter, kind) {
+  text = str(text, 400); if (!text) return;
+  var k = norm(text); if (m._ix.contra.has(k)) return;
+  m._ix.contra.add(k); m.contradictions.push({ id: nid(m, 'x'), text: text, chapter: chapter, kind: kind || 'possibleContradiction' });
+}
+function mergeCharInto(m, t, o) {
+  uniqPush(t.aliases, [o.name].concat(o.aliases), 40);
+  uniqPush(t.skills, o.skills, 60);
+  t.description = joinUniq(t.description, o.description, 900);
+  t.identity = joinUniq(t.identity, o.identity, 400);
+  if (!t.faction && o.faction) t.faction = o.faction;
+  t.factionHistory = (t.factionHistory || []).concat(o.factionHistory || []).sort(function (a, b) { return a.chapter - b.chapter; });
+  t.realmHistory = (t.realmHistory || []).concat(o.realmHistory || []).sort(function (a, b) { return a.chapter - b.chapter; });
+  if (o.lastChapter >= t.lastChapter) { if (o.realm) t.realm = o.realm; if (o.status && o.status !== 'unknown') { t.status = o.status; t.statusChapter = o.statusChapter; } }
+  else if (t.status === 'unknown' && o.status) { t.status = o.status; t.statusChapter = o.statusChapter; }
+  t.firstChapter = Math.min(t.firstChapter, o.firstChapter); t.lastChapter = Math.max(t.lastChapter, o.lastChapter);
+  t.appearances = (t.appearances || 0) + (o.appearances || 0);
+  t.needsCheck = t.needsCheck || o.needsCheck;
+  m.characters = m.characters.filter(function (c) { return c !== o; });
+  // remap relations
+  var rels = [];
+  m.relations.forEach(function (r) {
+    if (r.a === o.id) r.a = t.id; if (r.b === o.id) r.b = t.id;
+    if (r.a === r.b) return;
+    var k = r.a + '>' + r.b, ex = null;
+    for (var j = 0; j < rels.length; j++) if (rels[j].a === r.a && rels[j].b === r.b) { ex = rels[j]; break; }
+    if (ex) { ex.history = (ex.history || []).concat(r.history || []); if (norm(ex.type) !== norm(r.type)) ex.history.push({ type: r.type, detail: r.detail, sourceChapter: r.sourceChapter }); }
+    else rels.push(r);
+  });
+  m.relations = rels;
+  m._ix.rel = new Map(); rels.forEach(function (r) { m._ix.rel.set(r.a + '>' + r.b, r); });
+  regChar(m._ix, t);
+}
+function newChar(m, name, ch) {
+  var c = { id: nid(m, 'c'), name: str(name, 100), aliases: [], identity: '', faction: '', factionHistory: [], status: 'unknown', statusChapter: 0,
+    realm: '', realmHistory: [], skills: [], description: '', firstChapter: ch, lastChapter: ch, appearances: 0, confidence: 'confirmed', needsCheck: false };
+  m.characters.push(c); regChar(m._ix, c); return c;
+}
+function findChar(m, name) { return m._ix.chars.get(norm(name)) || null; }
+function resolveName(m, name) { var c = findChar(m, name); return c ? c.name : str(name, 100); }
+
+function mergeCharacter(m, d, ctx) {
+  var names = [d.name].concat(d.aliases).filter(function (x) { return x; });
+  if (!d.name) return null;
+  var found = [];
+  names.forEach(function (n) { var c = findChar(m, n); if (c && found.indexOf(c) < 0) found.push(c); });
+  var ch = chapOf(d.chapter, ctx), t;
+  var created = false;
+  if (!found.length) { t = newChar(m, d.name, ch.n); created = true; }
+  else {
+    found.sort(function (a, b) { return a.firstChapter - b.firstChapter; });
+    t = found[0];
+    for (var i = 1; i < found.length; i++) mergeCharInto(m, t, found[i]);
+  }
+  uniqPush(t.aliases, names.filter(function (n) { return norm(n) !== norm(t.name); }), 40);
+  regChar(m._ix, t);
+  t.identity = joinUniq(t.identity, d.identity, 400);
+  if (d.faction && norm(d.faction) !== norm(t.faction)) {
+    if (t.faction) t.factionHistory.push({ faction: t.faction, untilChapter: ch.n });
+    t.faction = d.faction;
+  }
+  var st = normStatus(d.status);
+  if (st && st !== t.status) {
+    if (t.status === 'dead' && (st === 'alive')) { addContra(m, t.name + ' đã được ghi nhận chết (chương ' + t.statusChapter + ') nhưng chương ' + ch.n + ' lại sống/xuất hiện — cần kiểm tra lại.', ch.n); t.needsCheck = true; }
+    t.status = st; t.statusChapter = ch.n;
+  }
+  if (d.realm && norm(d.realm) !== norm(t.realm)) { t.realm = d.realm; t.realmHistory.push({ realm: d.realm, chapter: ch.n }); }
+  uniqPush(t.skills, d.skills, 60);
+  t.description = joinUniq(t.description, d.description, 900);
+  t.firstChapter = Math.min(t.firstChapter, ch.n); t.lastChapter = Math.max(t.lastChapter, ch.n);
+  t.appearances = (t.appearances || 0) + 1;
+  if (d.confidence === 'uncertain' && created) t.confidence = 'uncertain';
+  if (d.confidence !== 'uncertain' && t.confidence === 'uncertain') t.confidence = 'confirmed';
+  if (ch.guess) t.needsCheck = true;
+  return t;
+}
+function mergeEntity(m, kind, d, ctx) {
+  if (!d.name) return;
+  var ch = chapOf(d.chapter, ctx), map = m._ix.ent[kind], k = norm(d.name), e = map.get(k);
+  if (!e) { e = { id: nid(m, kind[0]), name: d.name, description: '', firstChapter: ch.n, lastChapter: ch.n }; m[kind].push(e); map.set(k, e); }
+  e.description = joinUniq(e.description, d.description, 700);
+  e.lastChapter = Math.max(e.lastChapter, ch.n); e.firstChapter = Math.min(e.firstChapter, ch.n);
+  if (kind === 'organizations') { e.members = e.members || []; uniqPush(e.members, d.members, 80); }
+  if (kind === 'powerSystems') { e.levels = e.levels || []; var seen = new Set(e.levels.map(norm)); d.levels.forEach(function (l) { if (l && !seen.has(norm(l))) { e.levels.push(l); seen.add(norm(l)); } }); }
+  if (kind === 'items' && d.owner && norm(d.owner) !== norm(e.owner)) { e.ownerHistory = e.ownerHistory || []; if (e.owner) e.ownerHistory.push({ owner: e.owner, untilChapter: ch.n }); e.owner = d.owner; }
+}
+function mergeRelation(m, d, ctx) {
+  if (!d.from || !d.to || norm(d.from) === norm(d.to)) return;
+  var ch = chapOf(d.chapter, ctx);
+  var a = findChar(m, d.from) || (function () { var c = newChar(m, d.from, ch.n); c.confidence = 'uncertain'; c.needsCheck = true; return c; })();
+  var b = findChar(m, d.to) || (function () { var c = newChar(m, d.to, ch.n); c.confidence = 'uncertain'; c.needsCheck = true; return c; })();
+  if (a === b) return;
+  var key = a.id + '>' + b.id, r = m._ix.rel.get(key), type = str(d.type, 60) || 'chưa xác định';
+  if (!r) {
+    r = { id: nid(m, 'r'), a: a.id, b: b.id, type: type, detail: str(d.detail, 400), sourceChapter: ch.n, lastChapter: ch.n, confidence: d.confidence === 'uncertain' ? 'uncertain' : 'confirmed', history: [] };
+    m.relations.push(r); m._ix.rel.set(key, r);
+  } else if (norm(r.type) !== norm(type)) {
+    r.history.push({ type: r.type, detail: r.detail, sourceChapter: r.sourceChapter, untilChapter: ch.n });
+    r.type = type; r.detail = str(d.detail, 400); r.sourceChapter = ch.n; r.lastChapter = ch.n;
+    r.confidence = d.confidence === 'uncertain' ? 'uncertain' : 'confirmed';
+  } else { r.lastChapter = Math.max(r.lastChapter, ch.n); r.detail = joinUniq(r.detail, d.detail, 400); }
+}
+function pushThread(m, list, d, ctx, extra) {
+  var text = str(d.text, 500); if (!text) return null;
+  var ch = chapOf(d.chapter, ctx);
+  for (var i = 0; i < list.length; i++) if (jaccard(list[i].text, text) >= 0.8) return list[i];
+  var o = Object.assign({ id: nid(m, 't'), text: text, chapter: ch.n, confidence: d.confidence === 'uncertain' || ch.guess ? 'uncertain' : 'confirmed' }, extra || {});
+  list.push(o); return o;
+}
+function resolveThread(m, d, ctx) {
+  var ch = chapOf(d.chapter, ctx), target = null, i;
+  for (i = 0; i < m.unresolvedThreads.length; i++) if (d.id && m.unresolvedThreads[i].id === d.id) { target = m.unresolvedThreads[i]; break; }
+  if (!target && d.text) {
+    var best = 0.6;
+    for (i = 0; i < m.unresolvedThreads.length; i++) { var j = jaccard(m.unresolvedThreads[i].text, d.text); if (j >= best) { best = j; target = m.unresolvedThreads[i]; } }
+  }
+  if (!target) return;
+  m.unresolvedThreads = m.unresolvedThreads.filter(function (x) { return x !== target; });
+  target.resolvedChapter = ch.n; target.resolution = str(d.resolution, 400);
+  m.resolvedThreads.push(target);
+}
+
+function sfSumNormalizeDelta(raw) {
+  var d = raw && typeof raw === 'object' ? raw : {};
+  function strs(v) { return arr(v).map(function (x) { return str(x, 120); }).filter(Boolean); }
+  return {
+    characters: arr(d.characters).map(function (c) { c = c || {}; return { name: str(c.name, 100), aliases: strs(c.aliases), identity: str(c.identity, 300), faction: str(c.faction, 100),
+      status: str(c.status, 40), realm: str(c.realm, 100), skills: strs(c.skills), description: str(c.description, 500), chapter: c.chapter, confidence: c.confidence }; }),
+    relations: arr(d.relations).map(function (r) { r = r || {}; return { from: str(r.from, 100), to: str(r.to, 100), type: str(r.type, 60), detail: str(r.detail, 300), chapter: r.chapter, confidence: r.confidence }; }),
+    locations: arr(d.locations).map(function (x) { x = x || {}; return { name: str(x.name, 100), description: str(x.description, 400), chapter: x.chapter }; }),
+    organizations: arr(d.organizations).map(function (x) { x = x || {}; return { name: str(x.name, 100), description: str(x.description, 400), members: strs(x.members), chapter: x.chapter }; }),
+    powerSystems: arr(d.powerSystems).map(function (x) { x = x || {}; return { name: str(x.name, 100), description: str(x.description, 400), levels: strs(x.levels), chapter: x.chapter }; }),
+    items: arr(d.items).map(function (x) { x = x || {}; return { name: str(x.name, 100), description: str(x.description, 400), owner: str(x.owner, 100), chapter: x.chapter }; }),
+    events: arr(d.events).map(function (e) { e = e || {}; return { chapter: e.chapter, event: str(e.event, 500), characters: strs(e.characters), location: str(e.location, 100),
+      consequence: str(e.consequence, 400), importance: e.importance, kind: str(e.kind, 20), isFlashback: !!e.isFlashback, storyTime: str(e.storyTime, 80), confidence: e.confidence }; }),
+    mysteries: arr(d.mysteries).map(function (x) { x = x || {}; return { text: str(x.text, 500), chapter: x.chapter, confidence: x.confidence }; }),
+    foreshadowing: arr(d.foreshadowing).map(function (x) { x = x || {}; return { text: str(x.text, 500), chapter: x.chapter, confidence: x.confidence }; }),
+    importantFacts: arr(d.importantFacts).map(function (x) { x = x || {}; return { fact: str(x.fact, 400), sourceChapter: x.sourceChapter != null ? x.sourceChapter : x.chapter, confidence: x.confidence }; }),
+    unresolvedThreads: arr(d.unresolvedThreads).map(function (x) { x = x || {}; return { text: str(x.text, 500), chapter: x.chapter, confidence: x.confidence }; }),
+    resolvedThreads: arr(d.resolvedThreads).map(function (x) { x = x || {}; return { id: str(x.id, 20), text: str(x.text, 500), resolution: str(x.resolution, 400), chapter: x.chapter }; }),
+    aliasMerges: arr(d.aliasMerges).map(function (x) { x = x || {}; return { alias: str(x.alias, 100), canonical: str(x.canonical, 100), chapter: x.chapter }; }),
+    contradictions: arr(d.contradictions).map(function (x) { x = x || {}; return { text: str(typeof x === 'string' ? x : x.text, 400), chapter: x.chapter }; }),
+    currentState: str(d.currentState, 1500),
+    chapterSummaries: arr(d.chapterSummaries).map(function (x) { x = x || {}; return { chapter: x.chapter, summary: str(x.summary, 1500) }; }),
+    batchSummary: str(d.batchSummary, 1500)
+  };
+}
+
+// Merge delta -> memory. ctx = { cs, ce } (số chương GỐC của batch). Trả về thống kê.
+function sfSumMergeDelta(m, delta, ctx) {
+  if (!m._ix) indexMemory(m);
+  var d = sfSumNormalizeDelta(delta), st = { chars: 0, events: 0 };
+  var c0 = m.characters.length, e0 = m.events.length;
+  d.characters.forEach(function (c) { mergeCharacter(m, c, ctx); });
+  d.aliasMerges.forEach(function (x) {
+    if (!x.alias || !x.canonical || norm(x.alias) === norm(x.canonical)) return;
+    var ch = chapOf(x.chapter, ctx);
+    var canon = findChar(m, x.canonical) || newChar(m, x.canonical, ch.n);
+    var al = findChar(m, x.alias);
+    if (al && al !== canon) mergeCharInto(m, canon, al);
+    uniqPush(canon.aliases, [x.alias], 40); regChar(m._ix, canon);
+    canon.identity = joinUniq(canon.identity, '(chương ' + ch.n + ') là cùng người với "' + x.alias + '"', 400);
+  });
+  ['locations', 'organizations', 'powerSystems', 'items'].forEach(function (k) { d[k].forEach(function (e) { mergeEntity(m, k, e, ctx); }); });
+  d.relations.forEach(function (r) { mergeRelation(m, r, ctx); });
+  d.events.forEach(function (e) {
+    if (!e.event) return;
+    var ch = chapOf(e.chapter, ctx), key = ch.n + '|' + norm(e.event).slice(0, EV_KEY_LEN);
+    if (m._ix.ev.has(key)) return;
+    var imp = Math.max(1, Math.min(5, parseInt(e.importance, 10) || 3));
+    var kind = /^(occurred|claimed|speculation|secret|rumor)$/.test(e.kind) ? e.kind : 'occurred';
+    var ev = { id: nid(m, 'e'), chapter: ch.n, event: e.event, characters: e.characters.map(function (n) { return resolveName(m, n); }), location: e.location,
+      consequence: e.consequence, importance: imp, kind: kind, isFlashback: e.isFlashback, storyTime: e.storyTime, confidence: (e.confidence === 'uncertain' || ch.guess) ? 'uncertain' : 'confirmed' };
+    m._ix.ev.add(key); m.events.push(ev);
+    if (imp >= 4 || ev.isFlashback || ev.storyTime) m.timeline.push({ eventId: ev.id, chapter: ev.chapter, event: ev.event, characters: ev.characters, location: ev.location, consequence: ev.consequence,
+      isFlashback: ev.isFlashback, storyTime: ev.storyTime, order: m.timeline.length });
+  });
+  d.mysteries.forEach(function (x) { pushThread(m, m.mysteries, x, ctx, { status: 'open' }); });
+  d.foreshadowing.forEach(function (x) { pushThread(m, m.foreshadowing, x, ctx, { payoffChapter: null }); });
+  d.unresolvedThreads.forEach(function (x) { pushThread(m, m.unresolvedThreads, x, ctx); });
+  d.resolvedThreads.forEach(function (x) { resolveThread(m, x, ctx); });
+  d.importantFacts.forEach(function (f) {
+    if (!f.fact) return; var k = norm(f.fact); if (m._ix.facts.has(k)) return;
+    var ch = chapOf(f.sourceChapter, ctx);
+    m._ix.facts.add(k); m.importantFacts.push({ id: nid(m, 'f'), fact: f.fact, sourceChapter: ch.n, confidence: (f.confidence === 'uncertain' || ch.guess) ? 'uncertain' : 'confirmed' });
+  });
+  d.contradictions.forEach(function (x) { addContra(m, x.text, chapOf(x.chapter, ctx).n, 'possibleContradiction'); });
+  if (d.currentState) { m.currentState = d.currentState; m.currentStateChapter = ctx.ce; }
+  m.lastChapterNo = Math.max(m.lastChapterNo || 0, ctx.ce);
+  st.chars = m.characters.length - c0; st.events = m.events.length - e0;
+  return st;
+}
+
+/* ----------------------- 5. LOCAL COMPRESSOR ----------------------- */
+function sfSumCompress(m, opts) {
+  opts = opts || {};
+  if (!m._ix) indexMemory(m);
+  var before = JSON.stringify(m).length;
+  m.characters.forEach(function (c) {
+    if (c.description.length > 700) c.description = c.description.slice(0, 450) + ' … ' + c.description.slice(-200);
+    var rh = []; (c.realmHistory || []).forEach(function (x) { if (!rh.length || norm(rh[rh.length - 1].realm) !== norm(x.realm)) rh.push(x); }); c.realmHistory = rh;
+    if (c.skills.length > 60) c.skills = c.skills.slice(-60);
+  });
+  m.relations.forEach(function (r) { // gộp lịch sử liền kề cùng loại, KHÔNG xoá lịch sử khác loại
+    var h = []; (r.history || []).forEach(function (x) { if (!h.length || norm(h[h.length - 1].type) !== norm(x.type)) h.push(x); }); r.history = h;
+  });
+  // events: gộp trùng gần giống trong cùng chương
+  var byCh = new Map(), kept = [];
+  m.events.forEach(function (e) {
+    var l = byCh.get(e.chapter) || [], dup = false;
+    for (var i = 0; i < l.length; i++) if (jaccard(l[i].event, e.event) >= 0.85) { dup = true; if (e.importance > l[i].importance) l[i].importance = e.importance; break; }
+    if (!dup) { l.push(e); byCh.set(e.chapter, l); kept.push(e); }
+  });
+  m.events = kept;
+  // Chỉ khi vẫn quá lớn: bỏ sự kiện mức 1-2 đã cũ (đã có chapter summary giữ ý) — KHÔNG bao giờ bỏ mức >=3 hay timeline
+  var size = JSON.stringify(m).length;
+  if (size > (opts.softLimit || CFG_DEFAULT.memSoftLimit)) {
+    var cut = (m.lastChapterNo || 0) - 300;
+    var tl = new Set(m.timeline.map(function (t) { return t.eventId; }));
+    m.events = m.events.filter(function (e) { return !(e.importance <= 2 && e.chapter < cut && !tl.has(e.id)); });
+    m.resolvedThreads.forEach(function (t) { if (t.text.length > 200) t.text = t.text.slice(0, 200); });
+  }
+  m.compressedAt = Date.now(); indexMemory(m);
+  return { before: before, after: JSON.stringify(m).length };
+}
+
+/* ----------------------- 6. CONTEXT BUILDER ----------------------- */
+function cChar(c) {
+  var o = { name: c.name }; if (c.aliases.length) o.aliases = c.aliases.slice(0, 6);
+  if (c.identity) o.identity = c.identity.slice(0, 160); if (c.faction) o.faction = c.faction; o.status = c.status; if (c.realm) o.realm = c.realm;
+  if (c.skills.length) o.skills = c.skills.slice(-6); if (c.description) o.desc = c.description.slice(0, 200);
+  o.first = c.firstChapter; o.last = c.lastChapter; if (c.needsCheck) o.needsCheck = true; return o;
+}
+function sfSumBuildContext(m, text, budget, extra) {
+  extra = extra || {};
+  var low = norm(text || ''), scale = 1, out = '';
+  var byId = new Map(m.characters.map(function (c) { return [c.id, c]; }));
+  var mentioned = m.characters.filter(function (c) {
+    return [c.name].concat(c.aliases).some(function (n) { var k = norm(n); return k.length >= 2 && low.indexOf(k) >= 0; });
+  }).sort(function (a, b) { return b.appearances - a.appearances; });
+  var top = m.characters.slice().sort(function (a, b) { return b.appearances - a.appearances; });
+  var recent = m.characters.filter(function (c) { return c.lastChapter >= (m.lastChapterNo || 0) - 20; }).sort(function (a, b) { return b.lastChapter - a.lastChapter; });
+  var entMention = function (k) { return m[k].filter(function (e) { var n = norm(e.name); return n.length >= 2 && low.indexOf(n) >= 0; }); };
+  for (var iter = 0; iter < 7; iter++) {
+    var capC = Math.max(5, Math.floor(40 * scale)), set = new Map();
+    mentioned.slice(0, capC).concat(top.slice(0, Math.max(3, Math.floor(8 * scale))), recent.slice(0, Math.max(3, Math.floor(10 * scale)))).forEach(function (c) { set.set(c.id, c); });
+    if (extra.chars) extra.chars.slice(0, capC).forEach(function (c) { set.set(c.id, c); });
+    var names = new Set(); set.forEach(function (c) { names.add(c.name); });
+    var rels = m.relations.filter(function (r) { return set.has(r.a) || set.has(r.b); }).sort(function (x, y) { return (set.has(y.a) && set.has(y.b) ? 1 : 0) - (set.has(x.a) && set.has(x.b) ? 1 : 0) || y.lastChapter - x.lastChapter; }).slice(0, Math.floor(70 * scale));
+    var evs = m.events.filter(function (e) { return e.importance >= 3 && e.characters.some(function (n) { return names.has(n); }); }).slice(-Math.floor(30 * scale));
+    var lastEv = m.events.slice(-Math.max(4, Math.floor(10 * scale)));
+    var seenE = new Set(), evAll = [];
+    evs.concat(lastEv).forEach(function (e) { if (!seenE.has(e.id)) { seenE.add(e.id); evAll.push({ ch: e.chapter, event: e.event.slice(0, 220), who: e.characters.slice(0, 5), kind: e.kind, result: e.consequence.slice(0, 120) }); } });
+    var thr = m.unresolvedThreads.filter(function (t) { return t.text && (Array.from(names).some(function (n) { return norm(t.text).indexOf(norm(n)) >= 0; })); }).slice(-Math.floor(15 * scale))
+      .concat(m.unresolvedThreads.slice(-Math.max(3, Math.floor(8 * scale))));
+    var seenT = new Set(); thr = thr.filter(function (t) { if (seenT.has(t.id)) return false; seenT.add(t.id); return true; });
+    var ctxObj = {
+      readUpToChapter: m.lastChapterNo, currentState: m.currentState ? m.currentState.slice(0, Math.floor(900 * scale + 200)) : '',
+      characters: Array.from(set.values()).map(cChar),
+      relations: rels.map(function (r) { var a = byId.get(r.a), b = byId.get(r.b); return { from: a && a.name, to: b && b.name, type: r.type, since: r.sourceChapter, hist: (r.history || []).slice(-3).map(function (h) { return h.type + '@' + h.sourceChapter; }) }; }),
+      recentEvents: evAll,
+      openThreads: thr.map(function (t) { return { id: t.id, text: t.text.slice(0, 200), ch: t.chapter }; }),
+      openMysteries: m.mysteries.filter(function (t) { return t.status !== 'resolved'; }).slice(-Math.floor(10 * scale)).map(function (t) { return { text: t.text.slice(0, 160), ch: t.chapter }; }),
+      locations: entMention('locations').slice(0, Math.floor(12 * scale)).map(function (e) { return { name: e.name, desc: e.description.slice(0, DESC_SHORT) }; }),
+      organizations: entMention('organizations').slice(0, Math.floor(12 * scale)).map(function (e) { return { name: e.name, desc: e.description.slice(0, DESC_SHORT) }; }),
+      powerSystems: entMention('powerSystems').slice(0, 5).map(function (e) { return { name: e.name, levels: (e.levels || []).slice(0, 25) }; }),
+      items: entMention('items').slice(0, Math.floor(12 * scale)).map(function (e) { return { name: e.name, owner: e.owner, desc: e.description.slice(0, DESC_SHORT) }; }),
+      facts: m.importantFacts.filter(function (f) { return Array.from(names).some(function (n) { return norm(f.fact).indexOf(norm(n)) >= 0; }); }).slice(-Math.floor(25 * scale)).map(function (f) { return f.fact.slice(0, 180) + ' (ch.' + f.sourceChapter + ')'; })
+    };
+    if (extra.recentSummaries && extra.recentSummaries.length) ctxObj.previousChapters = extra.recentSummaries;
+    out = JSON.stringify(ctxObj);
+    if (out.length <= budget) return out;
+    scale *= 0.65;
+  }
+  return out.slice(0, budget);
+}
+
+/* ------------------------- 7. PROMPTS ------------------------- */
+var SCHEMA = '{"characters":[{"name":"","aliases":[],"identity":"","faction":"","status":"alive|dead|missing|unknown","realm":"","skills":[],"description":"","chapter":0,"confidence":"confirmed|uncertain"}],' +
+  '"relations":[{"from":"","to":"","type":"bạn|thù|sư đồ|đồng minh|gia đình|đối thủ|cấp trên|cấp dưới|chưa xác định|...","detail":"","chapter":0,"confidence":""}],' +
+  '"locations":[{"name":"","description":"","chapter":0}],"organizations":[{"name":"","description":"","members":[],"chapter":0}],' +
+  '"powerSystems":[{"name":"","description":"","levels":["thứ tự từ thấp đến cao"],"chapter":0}],"items":[{"name":"","description":"","owner":"","chapter":0}],' +
+  '"events":[{"chapter":0,"event":"","characters":[],"location":"","consequence":"","importance":1,"kind":"occurred|claimed|speculation|secret","isFlashback":false,"storyTime":"","confidence":""}],' +
+  '"mysteries":[{"text":"","chapter":0}],"foreshadowing":[{"text":"","chapter":0}],"importantFacts":[{"fact":"","sourceChapter":0,"confidence":""}],' +
+  '"unresolvedThreads":[{"text":"","chapter":0}],"resolvedThreads":[{"id":"mã t… trong Memory","resolution":"","chapter":0}],' +
+  '"aliasMerges":[{"alias":"","canonical":"","chapter":0}],"contradictions":[{"text":"","chapter":0}],' +
+  '"currentState":"trạng thái cốt truyện/nhân vật chính sau phần này","chapterSummaries":[{"chapter":0,"summary":"2-6 câu, đủ nhân vật/sự kiện/kết quả"}],"batchSummary":""}';
+
+function sfSumBuildBatchPrompt(ctxJson, b, chapterList, pieceInfo, bodyText) {
+  return 'Bạn là bộ phân tích truyện cực kỳ chính xác. Hãy đọc kỹ PHẦN TRUYỆN bên dưới và trả về BẢN CẬP NHẬT (delta) cho Story Memory.\n\n' +
+    'QUY TẮC BẮT BUỘC:\n' +
+    '1. Chỉ ghi thông tin CÓ trong PHẦN TRUYỆN này. Không tự bịa, không dùng kiến thức bên ngoài.\n' +
+    '2. Giữ NGUYÊN tên nhân vật, địa danh, tổ chức, cảnh giới, kỹ năng, vật phẩm đúng như văn bản nguồn (không dịch, không sửa, không đổi cách viết).\n' +
+    '3. Không bỏ sót: nhân vật mới, nhân vật chết/đổi phe, quan hệ mới, thân phận thật, đột phá cảnh giới, kỹ năng, vật phẩm quan trọng, địa điểm, tổ chức, chiến đấu và kết quả, nguyên nhân→kết quả, bí mật, phục bút (伏笔), lời hứa, mục tiêu, mâu thuẫn, việc chưa giải quyết.\n' +
+    '4. Phân biệt rõ trường "kind": occurred (đã xảy ra) / claimed (nhân vật nói, chưa kiểm chứng) / speculation (suy đoán) / secret (bí mật chưa xác nhận). Không biến suy đoán thành sự thật.\n' +
+    '5. Nếu thông tin mới MÂU THUẪN với Memory cũ: KHÔNG tự xoá/sửa thông tin cũ; ghi thêm vào "contradictions" kèm số chương.\n' +
+    '6. Nếu thấy hai tên thực ra là một người (lộ thân phận/đổi tên), ghi vào "aliasMerges", KHÔNG tạo nhân vật trùng. Tên đã có trong Memory thì dùng lại đúng tên đó.\n' +
+    '7. Flashback: isFlashback=true (kèm storyTime nếu biết), nhưng "chapter" vẫn là chương nơi nó được kể.\n' +
+    '8. Mọi "chapter" phải là SỐ CHƯƠNG GỐC ghi trong văn bản, nằm trong khoảng ' + b.chapterStart + '–' + b.chapterEnd + '. Không chắc → confidence:"uncertain".\n' +
+    '9. Mỗi chương trong phần này PHẢI có một mục trong "chapterSummaries". Mô tả viết tiếng Việt, ngắn gọn nhưng đủ ý; tên riêng giữ nguyên theo nguồn.\n' +
+    '10. Nếu một thread/bí mật trong Memory đã được giải quyết ở phần này, đưa vào "resolvedThreads" (dùng đúng id).\n\n' +
+    'ĐỊNH DẠNG: CHỈ trả về MỘT đối tượng JSON hợp lệ (không markdown, không lời dẫn). Trường nào không có thì để mảng rỗng/chuỗi rỗng. Schema:\n' + SCHEMA + '\n\n' +
+    '[STORY MEMORY LIÊN QUAN (JSON)]\n' + ctxJson + '\n\n' +
+    '[CÁC CHƯƠNG TRONG PHẦN NÀY]\n' + chapterList + '\n\n' +
+    '[PHẦN TRUYỆN — batch ' + (b.index + 1) + '/' + b.totalBatches + ', chương ' + b.chapterStart + '–' + b.chapterEnd + (pieceInfo ? ', ' + pieceInfo : '') + ']\n' + bodyText;
+}
+var CHAT_SYS = 'Bạn là chatbot trả lời về MỘT bộ truyện dựa HOÀN TOÀN trên dữ liệu "STORY MEMORY" và "TÓM TẮT CHƯƠNG" được cung cấp.\n' +
+  'QUY TẮC: (1) Chỉ dùng dữ liệu được cung cấp, không bịa, không đoán. (2) Dẫn số chương nguồn khi nêu sự kiện/sự thật. (3) Nếu dữ liệu không có câu trả lời, nói rõ "Dữ liệu đã đọc chưa có thông tin này". ' +
+  '(4) Nếu hỏi về chương lớn hơn "readUpToChapter" thì nói: "Chưa đọc đến chương này." (5) Giữ nguyên tên riêng như nguồn. (6) Phân biệt sự kiện đã xảy ra / lời nhân vật nói / suy đoán / bí mật chưa xác nhận; mục có confidence "uncertain" hoặc needsCheck thì nêu rõ là chưa chắc. Trả lời bằng tiếng Việt.';
+
+/* ------------------------- 8. JSON PARSE ------------------------- */
+function sfSumParseJSON(s) {
+  s = String(s || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  var a = s.indexOf('{'); if (a < 0) { var e0 = new Error('Không có JSON'); e0.badJson = true; throw e0; }
+  var z = s.lastIndexOf('}'); var body = z > a ? s.slice(a, z + 1) : s.slice(a);
+  try { return { value: JSON.parse(body), truncated: false }; } catch (e1) {}
+  try { return { value: JSON.parse(body.replace(/,\s*([}\]])/g, '$1')), truncated: false }; } catch (e2) {}
+  // thử cứu JSON bị cắt giữa chừng: cắt tại dấu phẩy cuối cùng ngoài chuỗi rồi đóng ngoặc
+  var stack = [], inStr = false, esc = false, lastComma = -1, snap = '';
+  for (var i = 0; i < s.length - a; i++) {
+    var ch = body[i] !== undefined ? body[i] : ''; if (!ch) break;
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true; else if (ch === '{' || ch === '[') stack.push(ch === '{' ? '}' : ']');
+    else if (ch === '}' || ch === ']') stack.pop(); else if (ch === ',') { lastComma = i; snap = stack.slice().reverse().join(''); }
+  }
+  if (lastComma > 0) {
+    try { return { value: JSON.parse(body.slice(0, lastComma) + snap), truncated: true }; } catch (e3) {}
+  }
+  var e = new Error('JSON không hợp lệ'); e.badJson = true; throw e;
+}
+
+/* ---------------------- 9. STORAGE (IndexedDB riêng) ---------------------- */
+function makeIdbStore() {
+  var dbp = null;
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res, rej) {
+      var rq = root.indexedDB.open('StoryForgeSummary', 1);
+      rq.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('jobs')) db.createObjectStore('jobs', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('chsum')) { var s = db.createObjectStore('chsum', { keyPath: 'key' }); s.createIndex('jobId', 'jobId'); }
+        if (!db.objectStoreNames.contains('chat')) db.createObjectStore('chat', { keyPath: 'id' });
+      };
+      rq.onsuccess = function () { res(rq.result); }; rq.onerror = function () { rej(rq.error); };
+    });
+    return dbp;
+  }
+  function rq(r) { return new Promise(function (res, rej) { r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
+  function done(tx) { return new Promise(function (res, rej) { tx.oncomplete = function () { res(); }; tx.onerror = function () { rej(tx.error); }; tx.onabort = function () { rej(tx.error || new Error('Giao dịch bị huỷ')); }; }); }
+  return {
+    getJob: function (id) { return open().then(function (db) { return rq(db.transaction('jobs').objectStore('jobs').get(id)); }).then(function (r) { return r || null; }); },
+    saveProgress: function (job, sums) { // 1 giao dịch: job (kèm Story Memory) + chapter summaries -> hoặc cả hai hoặc không gì cả
+      return open().then(function (db) { var tx = db.transaction(['jobs', 'chsum'], 'readwrite'); var cs = tx.objectStore('chsum'); sums.forEach(function (s) { cs.put(s); }); tx.objectStore('jobs').put(job); return done(tx); });
+    },
+    getSums: function (jobId) { return open().then(function (db) { return rq(db.transaction('chsum').objectStore('chsum').index('jobId').getAll(jobId)); }); },
+    deleteJob: function (id) {
+      return open().then(function (db) {
+        var tx = db.transaction(['jobs', 'chsum', 'chat'], 'readwrite'); tx.objectStore('jobs').delete(id); tx.objectStore('chat').delete(id);
+        var cur = tx.objectStore('chsum').index('jobId').openKeyCursor(IDBKeyRange.only(id));
+        cur.onsuccess = function () { var c = cur.result; if (c) { tx.objectStore('chsum').delete(c.primaryKey); c.continue(); } };
+        return done(tx);
+      });
+    },
+    getChat: function (id) { return open().then(function (db) { return rq(db.transaction('chat').objectStore('chat').get(id)); }).then(function (r) { return r ? r.msgs : []; }); },
+    putChat: function (id, msgs) { return open().then(function (db) { var tx = db.transaction('chat', 'readwrite'); tx.objectStore('chat').put({ id: id, msgs: msgs }); return done(tx); }); }
+  };
+}
+function makeMemStore() { // dùng cho test; hành vi giống IDB (clone JSON, ghi nguyên tử)
+  var jobs = new Map(), sums = new Map(), chat = new Map();
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+  return {
+    _jobs: jobs, _sums: sums, failNextSave: 0,
+    getJob: function (id) { return Promise.resolve(jobs.has(id) ? clone(jobs.get(id)) : null); },
+    saveProgress: function (job, s) {
+      if (this.failNextSave > 0) { this.failNextSave--; return Promise.reject(new Error('save fail')); }
+      s.forEach(function (x) { sums.set(x.key, clone(x)); }); jobs.set(job.id, clone(job)); return Promise.resolve();
+    },
+    getSums: function (jobId) { return Promise.resolve(Array.from(sums.values()).filter(function (x) { return x.jobId === jobId; }).map(clone)); },
+    deleteJob: function (id) { jobs.delete(id); chat.delete(id); Array.from(sums.keys()).forEach(function (k) { if (sums.get(k).jobId === id) sums.delete(k); }); return Promise.resolve(); },
+    getChat: function (id) { return Promise.resolve(chat.has(id) ? clone(chat.get(id)) : []); },
+    putChat: function (id, msgs) { chat.set(id, clone(msgs)); return Promise.resolve(); }
+  };
+}
+
+/* ------------------------- 10. ENGINE ------------------------- */
+var S = { cfg: Object.assign({}, CFG_DEFAULT), store: null, text: '', hash: '', plan: null, job: null, mem: null, sums: new Map(),
+  running: false, stop: false, ac: null, ui: null, onProgress: null, onLog: null, getSource: null };
+
+function log(msg, type) { if (S.onLog) try { S.onLog(msg, type || 'info'); } catch (e) {} }
+function progress() { if (S.onProgress) try { S.onProgress(snapshot()); } catch (e) {} }
+function storeObj() { if (!S.store) S.store = (root.indexedDB ? makeIdbStore() : makeMemStore()); return S.store; }
+function counts() {
+  var m = S.mem; if (!m) return { characters: 0, events: 0, secrets: 0, relations: 0 };
+  return { characters: m.characters.length, events: m.events.length, relations: m.relations.length,
+    secrets: m.mysteries.length + m.foreshadowing.length + m.unresolvedThreads.length };
+}
+function snapshot() {
+  var j = S.job, p = S.plan, nextB = j ? j.currentBatch : 0, total = p ? p.batches.length : 0;
+  return { status: j ? j.status : 'none', running: S.running, batch: nextB, totalBatches: total,
+    chapterNo: S.mem ? S.mem.lastChapterNo : 0, lastChapterOfFile: p && p.chapters.length ? p.chapters[p.chapters.length - 1].no : 0,
+    chaptersDone: j ? j.processedChapters : 0, totalChapters: p ? p.chapters.length : 0,
+    pct: total ? (nextB / total * 100) : 0, counts: counts(), lastError: j ? j.lastError : '', warnings: j ? (j.warnings || []).length : 0 };
+}
+
+/* ---- gọi AI dùng chung Key Pool (KHÔNG dùng callModel vì nó chèn prompt dịch) ---- */
+function ST() { return (typeof state !== 'undefined') ? state : root.state; }
+function IS_TRANSLATING() { return (typeof running !== 'undefined') && running === true; }
+function CUR_FILE_ID() { return (typeof sfCurrentFileId !== 'undefined') ? sfCurrentFileId : null; }
+function hasKeys() { try { var st0 = ST(); return !!(st0 && st0.keys && st0.keys.length); } catch (e) { return false; } }
+function usable() { return typeof root.hasUsableKey === 'function' ? root.hasUsableKey() : true; }
+async function oneRequest(prompt, k, outerSignal) {
+  var st = ST(), meta = st.keyMeta[k], ctl = new AbortController(), timedOut = false;
+  var onOuter = function () { ctl.abort(); };
+  if (outerSignal) { if (outerSignal.aborted) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; } outerSignal.addEventListener('abort', onOuter, { once: true }); }
+  var timer = setTimeout(function () { timedOut = true; ctl.abort(); }, S.cfg.timeoutMs);
+  if (typeof root.recordKeyCall === 'function') root.recordKeyCall(k);
+  meta.requests++; meta.lastUsed = Date.now(); meta.inFlight = (meta.inFlight || 0) + 1;
+  try {
+    var res;
+    try {
+      res = await fetch(root.wrapUrl(root.chatUrl()), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + st.keys[k] },
+        body: JSON.stringify({ model: st.model, messages: [{ role: 'user', content: prompt }] }), signal: ctl.signal });
+    } catch (ne) {
+      if (outerSignal && outerSignal.aborted) { var ab = new Error('Đã huỷ'); ab.aborted = true; throw ab; }
+      var er = new Error(timedOut ? 'Hết thời gian chờ (timeout)' : 'Lỗi mạng: ' + ne.message); er.status = timedOut ? 408 : 0; throw er;
+    }
+    if (!res.ok) {
+      var t = ''; try { t = await res.text(); } catch (e) {}
+      var err = new Error('HTTP ' + res.status); err.status = res.status; err.bodyText = t;
+      err.retryAfter = res.headers && res.headers.get ? parseFloat(res.headers.get('retry-after')) || null : null; throw err;
+    }
+    var data;
+    try { data = await res.json(); } catch (pe) {
+      if (outerSignal && outerSignal.aborted) { var ab2 = new Error('Đã huỷ'); ab2.aborted = true; throw ab2; }
+      var e2 = new Error('Lỗi đọc phản hồi'); e2.status = timedOut ? 408 : 0; throw e2;
+    }
+    var ch = data && data.choices && data.choices[0], content = ch && ((ch.message && ch.message.content) || ch.text) || '';
+    if (!content) { var e3 = new Error('Phản hồi rỗng'); e3.status = 0; throw e3; }
+    meta.success++;
+    return { content: String(content).trim(), finish: ch.finish_reason || '' };
+  } finally {
+    clearTimeout(timer); meta.inFlight = Math.max(0, (meta.inFlight || 1) - 1);
+    if (outerSignal) outerSignal.removeEventListener('abort', onOuter);
+    if (typeof root.renderKeys === 'function') try { root.renderKeys(); } catch (e) {}
+  }
+}
+function isPayloadErr(e) {
+  return e.status === 413 || (e.status === 400 && /context|too long|too large|maximum|token|exceed|length/i.test(e.bodyText || ''));
+}
+async function callAI(prompt, signal) {
+  var attempt = 0, rate = 0, last = null;
+  if (typeof root.ensureKeyMeta === 'function') root.ensureKeyMeta();
+  while (true) {
+    if (signal && signal.aborted) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; }
+    var k = root.pickAvailableKey();
+    if (k === -1) {
+      if (!usable()) { var ef = new Error('Không còn API key khả dụng (401/403 hoặc đã tắt).'); ef.fatal = true; throw ef; }
+      var w = Math.min(typeof root.getNearestCooldownMs === 'function' ? root.getNearestCooldownMs() : 3000, 120000);
+      log('Đang chờ key sẵn sàng ' + Math.ceil(w / 1000) + 's…', 'warn'); await sleep(w, signal); continue;
+    }
+    var meta = ST().keyMeta[k];
+    try { return await oneRequest(prompt, k, signal); }
+    catch (e) {
+      if (e.aborted) throw e;
+      last = e; meta.errors = (meta.errors || 0) + 1;
+      if (e.status === 429) {
+        meta.c429 = (meta.c429 || 0) + 1; meta.status = 'ratelimited';
+        meta.rateLimitUntil = Date.now() + (e.retryAfter ? e.retryAfter * 1000 : Math.min(120000, 15000 * Math.min(4, ++rate)));
+        if (++rate > S.cfg.maxRateRetries) { e.final = true; throw e; }
+        log('429 — đổi key/chờ rồi thử lại', 'warn'); continue;
+      }
+      if (e.status === 401 || e.status === 403) {
+        meta.c401 = (meta.c401 || 0) + 1; meta.status = 'error';
+        log('Key bị từ chối (' + e.status + ') — loại khỏi pool', 'err');
+        if (!usable()) { e.fatal = true; throw e; } continue;
+      }
+      if (isPayloadErr(e)) { e.payload = true; throw e; }
+      if (e.status === 404) { e.fatal = true; throw e; }
+      if (++attempt >= S.cfg.maxAttempts) { e.final = true; throw e; }
+      var back = Math.min(60000, S.cfg.backoffBase * Math.pow(2, attempt - 1)) + Math.floor(Math.random() * 500);
+      log((e.message || 'Lỗi') + ' — thử lại lần ' + (attempt + 1) + ' sau ' + Math.ceil(back / 1000) + 's', 'warn');
+      await sleep(back, signal);
+    }
+  }
+}
+
+/* ---- đọc 1 mảnh văn bản -> delta (tự chia đôi nếu quá dài/bị cắt) ---- */
+async function readPiece(b, text, ctxJson, chapterList, depth, label) {
+  var prompt = sfSumBuildBatchPrompt(ctxJson, b, chapterList, label, text), parsed = null, lastE = null;
+  for (var t = 0; t < 3; t++) {
+    try {
+      var r = await callAI(prompt, S.ac.signal);
+      if (r.finish === 'length') { var et = new Error('Đầu ra bị cắt (length)'); et.truncated = true; throw et; }
+      parsed = sfSumParseJSON(r.content);
+      if (parsed.truncated) { var et2 = new Error('JSON bị cắt'); et2.truncated = true; et2.partial = parsed.value; throw et2; }
+      return [parsed.value];
+    } catch (e) {
+      lastE = e;
+      if (e.aborted || e.fatal || e.final) throw e;
+      if (e.payload || e.truncated) break;
+      if (e.badJson) { log('AI trả JSON lỗi — thử lại (' + (t + 1) + '/3)', 'warn'); continue; }
+      throw e;
+    }
+  }
+  if (lastE && (lastE.payload || lastE.truncated || lastE.badJson)) {
+    if (depth < 4 && text.length > 3000) {
+      var mid = sfSumSplitRange(text, 0, text.length, Math.ceil(text.length / 2) + 1), out = [];
+      log('Chia đôi phần này (' + text.length + ' ký tự) để AI xử lý trọn vẹn', 'warn');
+      for (var i = 0; i < mid.length; i++) out = out.concat(await readPiece(b, text.slice(mid[i][0], mid[i][1]), ctxJson, chapterList, depth + 1, 'phần con ' + (i + 1) + '/' + mid.length));
+      return out;
+    }
+    if (lastE.partial) { log('Chấp nhận JSON đã cứu một phần (không thể chia nhỏ hơn)', 'warn'); return [lastE.partial]; }
+    var ef = new Error(lastE.message); ef.final = true; throw ef;
+  }
+  throw lastE;
+}
+
+async function saveJob(sumsToSave) {
+  var j = S.job; j.updatedAt = Date.now();
+  j.storyMemory = S.mem;
+  await storeObj().saveProgress(j, sumsToSave || []);
+}
+
+async function processBatch(i) {
+  var b = S.plan.batches[i], text = sfSumBatchText(S.text, b), m = S.mem;
+  var recent = []; for (var q = b.idxStart - 1; q >= 0 && recent.length < 2; q--) { if (S.sums.has(q)) recent.unshift({ chapter: S.plan.chapters[q].no, summary: S.sums.get(q).slice(0, 400) }); }
+  var ctxJson = sfSumBuildContext(m, text, S.cfg.ctxChars, { recentSummaries: recent });
+  var chs = []; for (var c = b.idxStart; c <= b.idxEnd && chs.length < 200; c++) chs.push(S.plan.chapters[c].no + ': ' + S.plan.chapters[c].title);
+  var deltas = await readPiece(b, text, ctxJson, chs.join('\n') + (b.partial ? '\n(chương này dài, được chia thành nhiều phần)' : ''), 0, b.partial ? 'đây là một PHẦN của chương' : '');
+  var newSums = [], warnings = [], seenNow = new Set();
+  deltas.forEach(function (d) {
+    var nd = sfSumNormalizeDelta(d);
+    sfSumMergeDelta(m, d, { cs: b.chapterStart, ce: b.chapterEnd });
+    var map = new Map(); for (var c2 = b.idxStart; c2 <= b.idxEnd; c2++) if (!map.has(S.plan.chapters[c2].no)) map.set(S.plan.chapters[c2].no, c2);
+    var got = new Set();
+    nd.chapterSummaries.forEach(function (x) {
+      var no = parseInt(x.chapter, 10);
+      if (!map.has(no) || !x.summary) { if (x.summary) warnings.push('Batch ' + (i + 1) + ': bỏ tóm tắt có số chương ngoài phạm vi (' + x.chapter + ')'); return; }
+      var idx = map.get(no); got.add(idx);
+      var old = S.sums.get(idx), val = x.summary;
+      if (old && old.indexOf(x.summary) >= 0) val = old;
+      else if (old && (b.partial || seenNow.has(idx))) val = (old + ' ' + x.summary).slice(0, 4000);
+      seenNow.add(idx);
+      S.sums.set(idx, val); newSums.push({ key: S.job.id + '::' + idx, jobId: S.job.id, idx: idx, no: no, text: val });
+    });
+    for (var c3 = b.idxStart; c3 <= b.idxEnd; c3++) if (!got.has(c3) && !S.sums.has(c3)) {
+      if (nd.batchSummary && (b.idxEnd - b.idxStart) < 3) { S.sums.set(c3, nd.batchSummary); newSums.push({ key: S.job.id + '::' + c3, jobId: S.job.id, idx: c3, no: S.plan.chapters[c3].no, text: nd.batchSummary }); }
+      else warnings.push('Chương ' + S.plan.chapters[c3].no + ': AI không trả tóm tắt riêng');
+    }
+  });
+  return { sums: newSums, warnings: warnings };
+}
+
+async function sfSumRun(opts) {
+  opts = opts || {};
+  if (S.running) return { ok: false, reason: 'busy' };
+  if (!S.job || !S.plan) return { ok: false, reason: 'no-job' };
+  if (IS_TRANSLATING() && !opts.force) return { ok: false, reason: 'translating' };
+  if (!hasKeys() || !ST().model || !(typeof root.chatUrl === 'function' && root.chatUrl())) return { ok: false, reason: 'no-api' };
+  S.running = true; S.stop = false; S.ac = new AbortController();
+  var j = S.job; j.status = 'running'; j.lastError = '';
+  var processedThisRun = 0;
+  try {
+    while (j.currentBatch < S.plan.batches.length) {
+      if (S.stop) { j.status = 'paused'; break; }
+      var i = j.currentBatch;
+      progress();
+      log('Đọc batch ' + (i + 1) + '/' + S.plan.batches.length + ' (chương ' + S.plan.batches[i].chapterStart + '–' + S.plan.batches[i].chapterEnd + ')');
+      var res = await processBatch(i);
+      j.currentBatch = i + 1;
+      j.processedChapters = S.plan.batches[i].idxEnd + 1;
+      if (res.warnings.length) j.warnings = (j.warnings || []).concat(res.warnings).slice(-300);
+      processedThisRun++;
+      var last = j.currentBatch >= S.plan.batches.length;
+      if (last || j.currentBatch % S.cfg.compressEvery === 0) { var cs = sfSumCompress(S.mem, { softLimit: S.cfg.memSoftLimit }); log('Nén Memory: ' + cs.before + ' → ' + cs.after + ' ký tự'); }
+      if (last) j.status = 'done';
+      try { await saveJob(res.sums); }
+      catch (se) { j.currentBatch = i; throw Object.assign(new Error('Không lưu được tiến độ: ' + se.message), { final: true, saveFail: true }); }
+      progress();
+    }
+    if (j.status === 'running') j.status = 'done';
+    if (j.status === 'done' || j.status === 'paused') { try { await saveJob([]); } catch (e) {} }
+    return { ok: true, status: j.status, processedThisRun: processedThisRun };
+  } catch (e) {
+    if (e.aborted) { j.status = 'paused'; try { await saveJob([]); } catch (x) {} return { ok: true, status: 'paused', processedThisRun: processedThisRun }; }
+    // Batch lỗi: KHÔNG đánh dấu done; currentBatch giữ nguyên; memory đã lưu của batch trước còn nguyên.
+    j.status = 'error'; j.lastError = e.message || String(e);
+    if (e.saveFail) { // merge đã áp vào RAM nhưng DB chưa nhận -> nạp lại từ DB để retry không merge đôi
+      try {
+        var again = await storeObj().getJob(j.id);
+        S.mem = again && again.storyMemory ? indexMemory(again.storyMemory) : newMemory();
+        S.sums = new Map(); (await storeObj().getSums(j.id)).forEach(function (x) { S.sums.set(x.idx, x.text); });
+        j.currentBatch = again ? again.currentBatch : 0; j.processedChapters = again ? again.processedChapters : 0;
+      } catch (x) {}
+    }
+    j.storyMemory = S.mem; try { await storeObj().saveProgress(Object.assign({}, j, { updatedAt: Date.now() }), []); } catch (x) {}
+    log('Lỗi ở batch ' + (j.currentBatch + 1) + ': ' + j.lastError + ' — bấm Tiếp tục để chỉ thử lại batch này', 'err');
+    return { ok: false, reason: 'error', error: j.lastError, batch: j.currentBatch };
+  } finally { S.running = false; S.ac = null; progress(); }
+}
+
+/* ---- khởi tạo job / resume theo sourceHash ---- */
+async function sfSumPrepare(text, opts) {
+  opts = opts || {};
+  S.text = text; S.hash = hashOf(text);
+  var id = 'job_' + S.hash, existing = await storeObj().getJob(id);
+  var bc = existing && existing.params && existing.params.batchChars ? existing.params.batchChars : (opts.batchChars || S.cfg.batchChars);
+  S.plan = sfSumPlan(text, bc);
+  S.sums = new Map();
+  if (existing && existing.sourceHash === S.hash && existing.storyMemory && existing.totalBatches === S.plan.batches.length) {
+    S.job = existing; S.mem = indexMemory(existing.storyMemory);
+    if (S.job.status === 'running') S.job.status = 'paused';
+    (await storeObj().getSums(id)).forEach(function (x) { S.sums.set(x.idx, x.text); });
+    S.mem.chapterSummaries = [];
+    return { resumed: true, job: S.job };
+  }
+  S.mem = newMemory();
+  S.job = { id: id, fileId: CUR_FILE_ID(), sourceHash: S.hash, status: 'ready',
+    currentBatch: 0, totalBatches: S.plan.batches.length, processedChapters: 0, params: { batchChars: bc }, storyMemory: S.mem,
+    startedAt: Date.now(), updatedAt: Date.now(), lastError: '', warnings: [] };
+  return { resumed: false, job: S.job };
+}
+async function sfSumReset() { if (S.job) { await storeObj().deleteJob(S.job.id); } S.job = null; S.mem = null; S.sums = new Map(); }
+
+/* ------------------------- 11. CHAT / COMPILE ------------------------- */
+function sfSumParseRange(q) {
+  var s = String(q || ''), m = /(?:ch(?:ư|u)ơng|chap(?:ter)?|ch\.?)\s*(\d+)\s*(?:(?:đến|tới|den|toi|to|-|–|—|→)\s*(?:ch(?:ư|u)ơng|chap(?:ter)?|ch\.?)?\s*(\d+))?/i.exec(s);
+  if (!m) return null; var a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a; return { start: Math.min(a, b), end: Math.max(a, b), single: !m[2] };
+}
+function sfSumIntent(q) {
+  var n = norm(q);
+  if (/t(ó|o)m t(ắ|a)t\s+(to(à|a)n b(ộ|o)|c(ả|a)|h(ế|e)t)\s+truy(ệ|e)n|t(ó|o)m t(ắ|a)t to(à|a)n b(ộ|o)/.test(n)) return 'all';
+  if (/t(ó|o)m t(ắ|a)t/.test(n) && sfSumParseRange(q)) return 'range';
+  return 'qa';
+}
+function chapterNos() { return S.plan.chapters.map(function (c) { return c.no; }); }
+async function callText(prompt) { var r = await callAI(prompt, (S.ac || (S.ac = new AbortController())).signal); return r.content; }
+
+async function sfSumCompile(startNo, endNo, focus, onStep) {
+  var m = S.mem, items = [];
+  S.plan.chapters.forEach(function (c) { if (c.no >= startNo && c.no <= endNo && S.sums.has(c.idx)) items.push({ no: c.no, text: S.sums.get(c.idx) }); });
+  if (!items.length) return 'Dữ liệu đã đọc chưa có tóm tắt cho khoảng chương này.';
+  var budget = S.cfg.ctxChars, level = 0;
+  var cur = items.map(function (x) { return { label: 'Chương ' + x.no, from: x.no, to: x.no, text: x.text }; });
+  var foc = focus || 'diễn biến toàn bộ';
+  var digest = function (txt) { return sfSumBuildContext(m, txt, Math.floor(budget * 0.5)); };
+  while (true) {
+    var groups = [], g0 = [], size = 0;
+    cur.forEach(function (x) { var l = x.text.length + x.label.length + 4; if (g0.length && size + l > budget) { groups.push(g0); g0 = []; size = 0; } g0.push(x); size += l; });
+    if (g0.length) groups.push(g0);
+    var final = groups.length === 1;
+    var next = [];
+    for (var gi = 0; gi < groups.length; gi++) {
+      if (S.stop) { var ea = new Error('Đã huỷ'); ea.aborted = true; throw ea; }
+      var body = groups[gi].map(function (x) { return '[' + x.label + '] ' + x.text; }).join('\n');
+      var prompt = 'Dựa HOÀN TOÀN vào dữ liệu dưới đây (STORY MEMORY liên quan + tóm tắt từng chương/đoạn), viết ' + (final ? 'BẢN TÓM TẮT HOÀN CHỈNH' : 'một đoạn tóm tắt mạch lạc') + ' về ' + foc +
+        ' của chương ' + groups[gi][0].from + ' đến ' + groups[gi][groups[gi].length - 1].to + '.\nYÊU CẦU: theo đúng diễn biến thời gian xuất bản; giữ nguyên tên nhân vật/cảnh giới/địa danh như nguồn; giữ nguyên nhân → kết quả và các bước ngoặt lớn; ' +
+        'KHÔNG bịa, KHÔNG làm sai quan hệ nhân vật, KHÔNG chỉ ghép nối từng chương một cách máy móc; nêu số chương ở các mốc quan trọng; nếu có mục uncertain/needsCheck thì nói rõ là chưa chắc.' +
+        (final ? ' Kết thúc bằng 1-2 câu về trạng thái hiện tại và các việc chưa giải quyết.' : '') + '\n\n[STORY MEMORY LIÊN QUAN]\n' + (final ? sfSumBuildContext(m, body, budget) : digest(body)) + '\n\n[DỮ LIỆU]\n' + body;
+      if (onStep) onStep({ level: level + 1, done: gi, total: groups.length });
+      var out = await callText(prompt);
+      next.push({ label: 'Chương ' + groups[gi][0].from + '–' + groups[gi][groups[gi].length - 1].to, from: groups[gi][0].from, to: groups[gi][groups[gi].length - 1].to, text: out });
+    }
+    if (final) return next[0].text;
+    cur = next; level++;
+  }
+}
+
+async function sfSumAsk(question, hooks) {
+  hooks = hooks || {};
+  if (!S.job || !S.mem || !S.mem.lastChapterNo && !S.job.currentBatch) return { text: 'Chưa đọc truyện nào. Hãy bấm “Bắt đầu đọc” trước (chatbot chỉ trả lời dựa trên nội dung đã đọc).', local: true };
+  var readTo = S.mem.lastChapterNo, intent = sfSumIntent(question), rg = sfSumParseRange(question);
+  if (rg && rg.start > readTo) return { text: 'Chưa đọc đến chương này. (Hiện mới đọc đến chương ' + readTo + '.)', local: true };
+  if (!S.ac || S.ac.signal.aborted) S.ac = new AbortController();
+  S.stop = false;
+  if (intent === 'all') {
+    if (S.job.status !== 'done') return { text: 'Chưa đọc hết file nên chưa thể tóm tắt toàn bộ (đã đọc batch ' + S.job.currentBatch + '/' + S.job.totalBatches + ', tới chương ' + readTo + '). Hãy bấm “Tiếp tục đọc” cho tới khi hoàn tất.', local: true };
+    return { text: await sfSumCompile(-Infinity, Infinity, 'diễn biến toàn bộ truyện', hooks.onStep) };
+  }
+  if (intent === 'range') {
+    var e = Math.min(rg.end, readTo), note = rg.end > readTo ? '\n\n(Lưu ý: mới đọc tới chương ' + readTo + ', phần sau chưa đọc.)' : '';
+    return { text: (await sfSumCompile(rg.start, e, 'diễn biến', hooks.onStep)) + note };
+  }
+  var recent = [], idxs = Array.from(S.sums.keys()).sort(function (a, b) { return a - b; });
+  var chosen = [];
+  if (rg) { S.plan.chapters.forEach(function (c) { if (c.no >= rg.start && c.no <= rg.end && S.sums.has(c.idx) && chosen.length < 40) chosen.push({ chapter: c.no, summary: S.sums.get(c.idx).slice(0, 700) }); }); }
+  else idxs.slice(-3).forEach(function (ix) { chosen.push({ chapter: S.plan.chapters[ix].no, summary: S.sums.get(ix).slice(0, 500) }); });
+  var ctx = sfSumBuildContext(S.mem, question + ' ' + (hooks.extraText || ''), S.cfg.ctxChars, { recentSummaries: [], chars: hooks.chars });
+  var srcSnippet = '';
+  if (rg && rg.single && /nguyên văn|trích|đoạn văn|nguồn|viết gì/i.test(question)) {
+    var ch = S.plan.chapters.filter(function (c) { return c.no === rg.start; })[0];
+    if (ch) srcSnippet = '\n\n[VĂN BẢN NGUỒN CHƯƠNG ' + ch.no + ' (cắt ≤ 8000 ký tự)]\n' + S.text.slice(ch.start, Math.min(ch.end, ch.start + 8000));
+  }
+  var prompt = CHAT_SYS + '\n\n[STORY MEMORY]\n' + ctx + '\n\n[TÓM TẮT CHƯƠNG LIÊN QUAN]\n' + JSON.stringify(chosen) + srcSnippet + '\n\n[CÂU HỎI]\n' + question;
+  return { text: await callText(prompt) };
+}
+
+/* ----- mode helpers: view cục bộ (không tốn AI, không bịa) ----- */
+function sfSumLocalView(kind, page, size) {
+  var m = S.mem; if (!m) return { text: 'Chưa có dữ liệu.', total: 0 };
+  size = size || 40; page = page || 0; var lines = [], byId = new Map(m.characters.map(function (c) { return [c.id, c]; }));
+  if (kind === 'characters') m.characters.slice().sort(function (a, b) { return b.appearances - a.appearances; }).forEach(function (c) {
+    lines.push(c.name + (c.aliases.length ? ' (' + c.aliases.slice(0, 5).join(', ') + ')' : '') + ' — ' + c.status + (c.realm ? ' · ' + c.realm : '') + (c.faction ? ' · phe: ' + c.faction : '') +
+      ' · ch.' + c.firstChapter + '→' + c.lastChapter + (c.identity ? ' · ' + c.identity.slice(0, 120) : '') + (c.confidence === 'uncertain' || c.needsCheck ? ' ⚠ cần kiểm tra' : ''));
+  });
+  else if (kind === 'events') m.events.filter(function (e) { return e.importance >= 4; }).sort(function (a, b) { return a.chapter - b.chapter; }).forEach(function (e) {
+    lines.push('Ch.' + e.chapter + ' [' + e.kind + (e.confidence === 'uncertain' ? ', chưa chắc' : '') + '] ' + e.event + (e.consequence ? ' ⇒ ' + e.consequence : ''));
+  });
+  else if (kind === 'timeline') m.timeline.slice().sort(function (a, b) { return a.chapter - b.chapter || a.order - b.order; }).forEach(function (t) {
+    lines.push('Ch.' + t.chapter + (t.isFlashback ? ' [flashback' + (t.storyTime ? ': ' + t.storyTime : '') + ']' : '') + ' — ' + t.event + (t.consequence ? ' ⇒ ' + t.consequence : '') + (t.location ? ' @' + t.location : ''));
+  });
+  else if (kind === 'relations') m.relations.slice().sort(function (a, b) { return b.lastChapter - a.lastChapter; }).forEach(function (r) {
+    var a = byId.get(r.a), b = byId.get(r.b); if (!a || !b) return;
+    lines.push(a.name + ' → ' + b.name + ': ' + r.type + ' (từ ch.' + r.sourceChapter + ')' + (r.history && r.history.length ? ' | trước đó: ' + r.history.map(function (h) { return h.type + ' (ch.' + h.sourceChapter + '→' + h.untilChapter + ')'; }).join(', ') : ''));
+  });
+  else if (kind === 'secrets') {
+    m.mysteries.concat(m.foreshadowing).forEach(function (t) { lines.push('[' + (t.status === 'resolved' ? 'đã giải' : 'chưa giải') + '] ch.' + t.chapter + ' — ' + t.text + (t.confidence === 'uncertain' ? ' (chưa chắc)' : '')); });
+    m.unresolvedThreads.forEach(function (t) { lines.push('[việc chưa giải quyết] ch.' + t.chapter + ' — ' + t.text); });
+  }
+  var total = lines.length;
+  return { text: lines.slice(page * size, page * size + size).join('\n') || '(Chưa có dữ liệu loại này.)', total: total, page: page, size: size, readTo: m.lastChapterNo };
+}
+
+/* ------------------------- 12. EXPORT API ------------------------- */
+var api = { CFG_DEFAULT: CFG_DEFAULT, S: S, norm: norm, sfSumParseChapters: sfSumParseChapters, sfSumSplitRange: sfSumSplitRange, sfSummaryChunker: sfSummaryChunker,
+  sfSumPlan: sfSumPlan, sfSumBatchText: sfSumBatchText, sfSumVerifyCoverage: sfSumVerifyCoverage, newMemory: newMemory, indexMemory: indexMemory,
+  sfSumMergeDelta: sfSumMergeDelta, sfSumCompress: sfSumCompress, sfSumBuildContext: sfSumBuildContext, sfSumParseJSON: sfSumParseJSON,
+  sfSumPrepare: sfSumPrepare, sfSumRun: sfSumRun, sfSumReset: sfSumReset, sfSumAsk: sfSumAsk, sfSumCompile: sfSumCompile, sfSumParseRange: sfSumParseRange,
+  sfSumIntent: sfSumIntent, sfSumLocalView: sfSumLocalView, makeMemStore: makeMemStore, makeIdbStore: makeIdbStore, snapshot: snapshot, counts: counts,
+  stop: function () { S.stop = true; if (S.ac) S.ac.abort(); } };
+root.SFSum = api;
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this));
+
+</script>
+<script>
+/* ===== CHATBOT TRUYỆN — UI controller (chỉ nối DOM với SFSum; không đụng hệ thống dịch) ===== */
+(function () {
+'use strict';
+if (typeof SFSum === 'undefined' || !document.getElementById('sfSumCard')) return;
+var $ = function (id) { return document.getElementById(id); };
+var S = SFSum.S, sig = '', msgs = [], busy = false, preparing = false;
+function fmt(n) { return Number(n || 0).toLocaleString('vi-VN'); }
+function intVal(id, def, lo, hi) { var v = parseInt($(id).value, 10); if (!Number.isFinite(v)) v = def; return Math.max(lo, Math.min(hi, v)); }
+
+function log(msg, type) {
+  var box = $('sfSumLog'); if (!box) return;
+  var row = document.createElement('div'); row.className = 'sfsum-logrow ' + (type || 'info');
+  row.textContent = new Date().toLocaleTimeString('vi-VN', { hour12: false }) + '  ' + msg;
+  box.appendChild(row); while (box.children.length > 150) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
+}
+function readCfg() {
+  S.cfg.batchChars = intVal('sfSumBatchChars', 20000, 3000, 200000);
+  S.cfg.compressEvery = intVal('sfSumCompressEvery', 10, 1, 1000);
+  S.cfg.ctxChars = intVal('sfSumCtxChars', 14000, 3000, 60000);
+}
+function render(s) {
+  s = s || SFSum.snapshot();
+  var pill = $('sfSumPill'), map = { none: 'chưa có file', ready: 'sẵn sàng', running: 'đang đọc…', paused: 'tạm dừng', error: 'lỗi — có thể tiếp tục', done: 'đã đọc hết' };
+  pill.textContent = map[s.running ? 'running' : s.status] || s.status; pill.className = 'sfsum-pill ' + (s.running ? 'run' : s.status);
+  $('sfSumBarFill').style.width = Math.min(100, s.pct).toFixed(2) + '%';
+  var memTxt = s.running ? 'đang cập nhật' : (s.status === 'done' ? 'hoàn tất' : (s.status === 'none' ? '—' : 'đã lưu'));
+  $('sfSumStats').innerHTML =
+    '<div><b>Batch</b>' + fmt(s.batch) + ' / ' + fmt(s.totalBatches) + '</div>' +
+    '<div><b>Chương</b>' + fmt(s.chapterNo) + ' / ' + fmt(s.lastChapterOfFile) + '</div>' +
+    '<div><b>Tiến độ</b>' + s.pct.toFixed(2) + '%</div>' +
+    '<div><b>Nhân vật</b>' + fmt(s.counts.characters) + '</div>' +
+    '<div><b>Sự kiện</b>' + fmt(s.counts.events) + '</div>' +
+    '<div><b>Bí mật</b>' + fmt(s.counts.secrets) + '</div>' +
+    '<div><b>Memory</b>' + memTxt + '</div>';
+  var info = '';
+  if (s.status === 'none') info = 'Chưa có file nguồn. Hãy tải file truyện ở mục “Tải lên file truyện”.';
+  else if (s.running) info = 'Đang đọc truyện… (tiến độ tự lưu sau mỗi batch)';
+  else if (s.status === 'done') info = '✅ Đã đọc hết file. Có thể “Tóm tắt toàn bộ” và hỏi đáp.';
+  else if (s.status === 'error') info = '⚠️ ' + (s.lastError || 'Lỗi') + ' — dữ liệu các batch trước vẫn an toàn. Bấm “Tiếp tục đọc” để chỉ thử lại batch lỗi (' + (s.batch + 1) + ').';
+  else if (s.batch > 0) info = 'Có phiên đọc dở: đã xong ' + fmt(s.batch) + '/' + fmt(s.totalBatches) + ' batch. Bấm “Tiếp tục đọc” để đọc tiếp từ batch ' + fmt(s.batch + 1) + '.';
+  else info = 'Sẵn sàng: ' + fmt(s.totalChapters) + ' chương → ' + fmt(s.totalBatches) + ' batch.';
+  if (s.warnings && !s.running) info += ' (' + s.warnings + ' cảnh báo nhẹ, ví dụ AI bỏ sót tóm tắt một chương)';
+  $('sfSumInfo').textContent = info;
+  var st = $('sfSumStartBtn'); st.disabled = s.running || s.status === 'none' || s.status === 'done';
+  st.textContent = s.batch > 0 && s.status !== 'done' ? '▶ Tiếp tục đọc' : '▶ Bắt đầu đọc';
+  $('sfSumStopBtn').style.display = s.running ? '' : 'none';
+  $('sfSumResetBtn').disabled = s.running || s.status === 'none';
+  $('sfSumExportBtn').disabled = s.status === 'none' || !s.counts.characters && !s.counts.events;
+  var canAll = s.status === 'done'; $('sfSumModeAll').title = canAll ? '' : 'Chỉ chạy sau khi đã đọc hết file';
+  $('sfSumModeAll').style.opacity = canAll ? '' : '.55';
+}
+S.onLog = log; S.onProgress = render;
+
+function currentText() { return typeof sf_getFullSourceText === 'function' ? (sf_getFullSourceText() || '') : ''; }
+function sourceSig(t) { return t.length + '|' + t.slice(0, 80) + '|' + t.slice(-80); }
+async function refreshSource(force) {
+  if (S.running || preparing) return;
+  var t = currentText(), sg = sourceSig(t);
+  if (!force && sg === sig) return;
+  sig = sg; preparing = true;
+  try {
+    if (!t.trim()) { S.job = null; S.mem = null; S.plan = null; render({ status: 'none', pct: 0, batch: 0, totalBatches: 0, chapterNo: 0, lastChapterOfFile: 0, counts: { characters: 0, events: 0, secrets: 0 }, running: false }); return; }
+    readCfg(); await SFSum.sfSumPrepare(t, { batchChars: S.cfg.batchChars });
+    $('sfSumBatchChars').value = S.plan.batchChars;
+    try { msgs = await S.store.getChat(S.job.id); } catch (e) { msgs = []; }
+    renderChat(); render();
+  } catch (e) { log('Không chuẩn bị được: ' + e.message, 'err'); }
+  finally { preparing = false; }
+}
+async function onStart() {
+  if (S.running) return;
+  await refreshSource(true); if (!S.job) { alert('Chưa có file truyện để đọc.'); return; }
+  readCfg();
+  var r = await SFSum.sfSumRun();
+  if (r && r.reason === 'translating') alert('Hệ thống dịch đang chạy. Hãy dừng/đợi dịch xong rồi mới đọc truyện để không tranh API key với bộ dịch.');
+  else if (r && r.reason === 'no-api') alert('Chưa cấu hình API (Base URL / Model / API key). Mở mục Cài đặt → Custom Proxy.');
+}
+function onStop() { SFSum.stop(); log('Đã yêu cầu dừng — batch đang đọc dở sẽ được đọc lại khi tiếp tục.', 'warn'); }
+async function onReset() {
+  if (!S.job) return; if (!confirm('Xoá toàn bộ Story Memory + tiến độ đọc của file này và đọc lại từ đầu?')) return;
+  await SFSum.sfSumReset(); msgs = []; renderChat(); await refreshSource(true);
+}
+function onExport() {
+  if (!S.mem) return;
+  var sums = Array.from(S.sums.entries()).sort(function (a, b) { return a[0] - b[0]; }).map(function (e) { return { chapter: S.plan.chapters[e[0]].no, summary: e[1] }; });
+  var blob = new Blob([JSON.stringify({ exportedAt: Date.now(), job: { id: S.job.id, sourceHash: S.job.sourceHash, status: S.job.status, currentBatch: S.job.currentBatch, totalBatches: S.job.totalBatches }, storyMemory: S.mem, chapterSummaries: sums }, null, 1)], { type: 'application/json;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'story-memory.json'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* -------------------------- chat -------------------------- */
+function renderChat() {
+  var box = $('sfSumChatBox'); box.textContent = '';
+  msgs.slice(-80).forEach(function (m) { appendMsg(m.role, m.text, true); });
+  if (!msgs.length) { var h = document.createElement('div'); h.className = 'sfsum-hint'; h.textContent = 'Hỏi về nhân vật, quan hệ, cảnh giới, bí mật, “Tóm tắt từ chương 1 đến chương 500”, “Tóm tắt toàn bộ truyện”… Chatbot chỉ trả lời từ nội dung đã đọc.'; box.appendChild(h); }
+}
+function appendMsg(role, text, noSave, extra) {
+  var box = $('sfSumChatBox'); var hint = box.querySelector('.sfsum-hint'); if (hint) hint.remove();
+  var d = document.createElement('div'); d.className = 'sfsum-msg ' + role; d.textContent = text; if (extra) d.appendChild(extra);
+  box.appendChild(d); while (box.children.length > 80) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
+  if (!noSave) { msgs.push({ role: role, text: text }); if (msgs.length > 120) msgs = msgs.slice(-120); if (S.job && S.store) S.store.putChat(S.job.id, msgs).catch(function () {}); }
+  return d;
+}
+async function ask(q, hooks) {
+  if (busy) return; if (!q.trim()) return;
+  if (!S.job) { await refreshSource(true); }
+  busy = true; $('sfSumSendBtn').disabled = true; appendMsg('user', q);
+  var wait = appendMsg('bot', '⏳ Đang trả lời…', true);
+  try {
+    readCfg();
+    var r = await SFSum.sfSumAsk(q, Object.assign({ onStep: function (st) { wait.textContent = '⏳ Đang tổng hợp… cấp ' + st.level + ': ' + (st.done + 1) + '/' + st.total; } }, hooks || {}));
+    wait.remove(); appendMsg('bot', r.text);
+  } catch (e) { wait.remove(); appendMsg('bot', e.aborted ? 'Đã huỷ.' : '⚠️ Lỗi: ' + (e.message || e), true); }
+  finally { busy = false; $('sfSumSendBtn').disabled = false; }
+}
+function localView(kind, title, page) {
+  if (!S.mem) { appendMsg('bot', 'Chưa có dữ liệu. Hãy bấm “Bắt đầu đọc” trước.', true); return; }
+  var v = SFSum.sfSumLocalView(kind, page || 0, 40), btn = null, shown = Math.min(v.total, ((page || 0) + 1) * v.size);
+  var head = title + ' — ' + fmt(v.total) + ' mục (đã đọc tới chương ' + v.readTo + (S.job.status === 'done' ? ', đã đọc hết file' : ', CHƯA đọc hết file') + ')\n\n';
+  if (shown < v.total) { btn = document.createElement('button'); btn.className = 'btn small'; btn.style.marginTop = '8px'; btn.style.display = 'block'; btn.textContent = 'Xem thêm (' + fmt(v.total - shown) + ' mục)'; btn.onclick = function () { btn.remove(); localView(kind, title + ' (tiếp)', (page || 0) + 1); }; }
+  appendMsg('bot', head + v.text, true, btn);
+}
+function modeRange() {
+  var a = parseInt($('sfSumFrom').value, 10), b = parseInt($('sfSumTo').value, 10);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) { alert('Nhập chương bắt đầu và kết thúc.'); return; }
+  ask('Tóm tắt từ chương ' + Math.min(a, b) + ' đến chương ' + Math.max(a, b));
+}
+async function modePlot() {
+  if (busy) return; if (!S.mem || !S.mem.lastChapterNo) { appendMsg('bot', 'Chưa đọc truyện nào.', true); return; }
+  busy = true; $('sfSumSendBtn').disabled = true; appendMsg('user', 'Tóm tắt cốt truyện'); var wait = appendMsg('bot', '⏳ Đang tổng hợp…', true);
+  try {
+    readCfg(); var note = S.job.status === 'done' ? '' : '\n\n(Lưu ý: mới đọc tới chương ' + S.mem.lastChapterNo + '.)';
+    var t = await SFSum.sfSumCompile(-Infinity, Infinity, 'cốt truyện (mạch chính, mâu thuẫn chính, các bước ngoặt, nhân vật then chốt)', function (st) { wait.textContent = '⏳ Đang tổng hợp… cấp ' + st.level + ': ' + (st.done + 1) + '/' + st.total; });
+    wait.remove(); appendMsg('bot', t + note);
+  } catch (e) { wait.remove(); appendMsg('bot', e.aborted ? 'Đã huỷ.' : '⚠️ Lỗi: ' + (e.message || e), true); }
+  finally { busy = false; $('sfSumSendBtn').disabled = false; }
+}
+
+$('sfSumStartBtn').onclick = onStart; $('sfSumStopBtn').onclick = onStop; $('sfSumResetBtn').onclick = onReset; $('sfSumExportBtn').onclick = onExport;
+$('sfSumSendBtn').onclick = function () { var q = $('sfSumInput').value; $('sfSumInput').value = ''; ask(q); };
+$('sfSumInput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sfSumSendBtn').click(); } });
+$('sfSumModeAll').onclick = function () { ask('Tóm tắt toàn bộ truyện'); };
+$('sfSumModeRange').onclick = modeRange; $('sfSumModePlot').onclick = modePlot;
+$('sfSumModeChars').onclick = function () { localView('characters', '👥 Nhân vật'); };
+$('sfSumModeEvents').onclick = function () { localView('events', '⚡ Sự kiện quan trọng'); };
+$('sfSumModeSecrets').onclick = function () { localView('secrets', '🔮 Bí mật / 伏笔 / việc chưa giải quyết'); };
+$('sfSumModeTimeline').onclick = function () { localView('timeline', '🕰 Timeline'); };
+$('sfSumModeRel').onclick = function () { localView('relations', '🔗 Quan hệ nhân vật'); };
+$('sfSumBatchChars').addEventListener('change', function () { if (S.job && S.job.currentBatch === 0 && !S.running) refreshSource(true); });
+var nav = $('sfSumNav'); if (nav) nav.onclick = function () { $('sfSumCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+
+render({ status: 'none', pct: 0, batch: 0, totalBatches: 0, chapterNo: 0, lastChapterOfFile: 0, counts: { characters: 0, events: 0, secrets: 0 }, running: false });
+renderChat(); setInterval(function () { refreshSource(false); }, 2000); setTimeout(function () { refreshSource(true); }, 600);
+})();
+
 </script>
 </body>
 </html>
