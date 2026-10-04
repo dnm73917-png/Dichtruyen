@@ -7030,6 +7030,7 @@ var CFG_DEFAULT = { batchChars: 20000, ctxChars: 14000, compressEvery: 10,
   maxAttempts: 6, maxRateRetries: 60, backoffBase: 1500, timeoutMs: 240000, memSoftLimit: 900000,
   parallel: 7,        // trần request summary đồng thời (UI: 1–20). Thực tế = min(key khả dụng, parallel, key còn RPM)
   lookahead: 6,       // cửa sổ chạy trước: chỉ giao batch i < (batch chưa gộp đầu tiên + parallel*lookahead) -> chặn buffer vô hạn khi 1 batch chậm
+  hedgeMinMs: 30000,  // batch ĐẦU HÀNG (chặn việc gộp) chạy quá max(hedgeMinMs, 2.5×trung vị) mà còn key rảnh => chạy thêm 1 bản sao trên key khác, bản nào xong trước thắng
   maxBatchRounds: 3 };// số lần đưa batch lỗi quay lại hàng đợi (mỗi lần callAI còn tự retry/đổi key) trước khi dừng ở trạng thái lỗi
 
 /* ------------------------------ utils ------------------------------ */
@@ -7617,7 +7618,7 @@ function makeMemStore() { // dùng cho test; hành vi giống IDB (clone JSON, g
 var S = { cfg: Object.assign({}, CFG_DEFAULT), store: null, text: '', hash: '', plan: null, job: null, mem: null, sums: new Map(),
   running: false, stop: false, ac: null, ui: null, onProgress: null, onLog: null, getSource: null, par: newPar() };
 // Trạng thái runtime của worker pool (chỉ để hiển thị/kiểm chứng; KHÔNG phải key pool thứ hai)
-function newPar() { return { active: new Map(), lastDone: {}, keyReq: {}, log: [], failedSet: new Set(), retries: 0, reqInFlight: 0, peakRequests: 0, peakBatches: 0, lastWaitLog: 0, startedAt: 0 }; }
+function newPar() { return { active: new Map(), lastDone: {}, keyReq: {}, log: [], failedSet: new Set(), retries: 0, reqInFlight: 0, peakRequests: 0, peakBatches: 0, lastWaitLog: 0, startedAt: 0, hedges: 0, durs: [] }; }
 
 function log(msg, type) { if (S.onLog) try { S.onLog(msg, type || 'info'); } catch (e) {} }
 function progress() { if (S.onProgress) try { S.onProgress(snapshot()); } catch (e) {} }
@@ -7645,7 +7646,7 @@ function parSnapshot() {
   var waiting = 0; P.active.forEach(function (r) { if (r.keyIndex === -1) waiting++; });
   return { limit: Math.max(1, Math.min(20, parseInt(S.cfg.parallel, 10) || 7)), effective: eff, keysAvailable: avail, keys: nKeys, running: run, waitingForKey: waiting,
     completed: completed, merged: merged, heldForOrder: held, pending: Math.max(0, total - completed - run), failed: P.failedSet.size, retries: P.retries,
-    peakRequests: P.peakRequests, peakBatches: P.peakBatches, workers: workers };
+    peakRequests: P.peakRequests, peakBatches: P.peakBatches, hedges: P.hedges, workers: workers };
 }
 function snapshot() {
   var j = S.job, p = S.plan, nextB = j ? j.currentBatch : 0, total = p ? p.batches.length : 0;
@@ -7790,7 +7791,7 @@ async function readPiece(b, text, ctxJson, chapterList, depth, label, rec) {
   var prompt = sfSumBuildBatchPrompt(ctxJson, b, chapterList, label, text), parsed = null, lastE = null;
   for (var t = 0; t < 3; t++) {
     try {
-      var r = await callAI(prompt, S.ac.signal, rec);
+      var r = await callAI(prompt, (rec && rec.signal) || S.ac.signal, rec);
       if (r.finish === 'length') { var et = new Error('Đầu ra bị cắt (length)'); et.truncated = true; throw et; }
       parsed = sfSumParseJSON(r.content);
       if (parsed.truncated) { var et2 = new Error('JSON bị cắt'); et2.truncated = true; et2.partial = parsed.value; throw et2; }
@@ -7887,7 +7888,7 @@ async function runPool(j) {
   function wake() { if (wakeFn) { var f = wakeFn; wakeFn = null; f(); } }
   function nextIdx() { // batch nhỏ nhất chưa xong/chưa chạy trong cửa sổ -> batch lỗi (nhỏ hơn) luôn được ưu tiên chạy lại trước
     var now = Date.now(), hi = Math.min(total, j.currentBatch + win);
-    for (var i = j.currentBatch; i < hi; i++) { if (j.results[i] || running.has(i)) continue; if (notBefore[i] && notBefore[i] > now) continue; return i; }
+    for (var i = j.currentBatch; i < hi; i++) { if (j.results[i] || live.has(i)) continue; if (notBefore[i] && notBefore[i] > now) continue; return i; }
     return -1;
   }
   function flushMerge() { // gộp theo batchIndex tăng dần, đồng bộ hoàn toàn
@@ -7912,33 +7913,56 @@ async function runPool(j) {
     } catch (e) { saveErr = e; }
     finally { saving = null; wake(); }
   }
-  function launch(i) {
-    var rec = { batch: i, keyIndex: -1, attempt: 0, startedAt: Date.now(), avoid: lastKey[i] === undefined ? -1 : lastKey[i] };
-    running.set(i, rec); P.active.set(i, rec);
+  var seq = 0, live = new Map(), firstStart = {};
+  function launch(i, hedge) { // mỗi "instance" = 1 request chạy trên 1 key; 1 batch có thể có 2 instance (bản chính + hedge)
+    var rec = { id: i + '#' + (++seq), batch: i, keyIndex: -1, attempt: 0, startedAt: Date.now(), hedge: !!hedge, ac: new AbortController(), avoid: lastKey[i] === undefined ? -1 : lastKey[i] };
+    rec.signal = rec.ac.signal;
+    var onAbort = function () { rec.ac.abort(); }; S.ac.signal.addEventListener('abort', onAbort, { once: true });
+    if (firstStart[i] === undefined) firstStart[i] = rec.startedAt;
+    var set = live.get(i); if (!set) { set = new Set(); live.set(i, set); } set.add(rec);
+    running.set(rec.id, rec); P.active.set(rec.id, rec);
     if (P.active.size > P.peakBatches) P.peakBatches = P.active.size;
     var t = (async function () {
       var deltas = null;
       try { deltas = await extractBatch(i, rec); }
       catch (e) {
         if (e.aborted) return;
+        if (j.results[i] || i < j.currentBatch) return; // instance kia đã thắng
         if (e.fatal) { halt = halt || e; return; }
+        if (set.size > 1) { log('Batch ' + (i + 1) + ': một bản chạy lỗi (' + (e.message || e) + ') — bản còn lại vẫn đang chạy', 'warn'); return; }
         rounds[i] = (rounds[i] || 0) + 1; P.retries++; lastKey[i] = rec.keyIndex;
         if (rounds[i] >= S.cfg.maxBatchRounds) { P.failedSet.add(i); halt = halt || e; log('Batch ' + (i + 1) + ' lỗi sau ' + rounds[i] + ' lượt: ' + (e.message || e), 'err'); }
         else { notBefore[i] = Date.now() + 1500 * rounds[i]; log('Batch ' + (i + 1) + ' lỗi (' + (e.message || e) + ') — trả lại hàng đợi, thử lại bằng key khác', 'warn'); }
         return;
-      } finally { running.delete(i); P.active.delete(i); wake(); }
-      // batch xong: lưu kết quả RIÊNG theo batchIndex, rồi gộp những batch liên tiếp đã sẵn sàng
-      j.results[i] = { status: 'done', deltas: deltas, keyIndex: rec.keyIndex, attempt: rec.attempt, startedAt: rec.startedAt, finishedAt: Date.now() };
+      } finally {
+        running.delete(rec.id); P.active.delete(rec.id); set.delete(rec); if (!set.size) live.delete(i);
+        S.ac.signal.removeEventListener('abort', onAbort); wake();
+      }
+      if (j.results[i] || i < j.currentBatch) return; // thua cuộc đua với instance khác -> bỏ kết quả (không bao giờ merge 2 lần)
+      // batch xong: lưu kết quả RIÊNG theo batchIndex, huỷ instance còn lại, rồi gộp những batch liên tiếp đã sẵn sàng
+      j.results[i] = { status: 'done', deltas: deltas, keyIndex: rec.keyIndex, attempt: rec.attempt, startedAt: rec.startedAt, finishedAt: Date.now(), hedge: rec.hedge };
       P.lastDone[rec.keyIndex] = { batch: i, at: Date.now() };
+      P.durs.push(Date.now() - (firstStart[i] || rec.startedAt)); if (P.durs.length > 50) P.durs.shift();
+      var other = live.get(i); if (other) other.forEach(function (r) { r.ac.abort(); });
       try { flushMerge(); } catch (me) { me.final = true; me.saveFail = true; halt = halt || me; return; }
       save(); wake();
     })();
     tasks.add(t); t.then(function () { tasks.delete(t); progress(); });
   }
+  function medianDur() { var a = P.durs.slice().sort(function (x, y) { return x - y; }); return a.length ? a[a.length >> 1] : 0; }
+  function maybeHedge() { // chống head-of-line blocking: batch j.currentBatch chặn việc gộp mà chạy quá lâu, còn key rảnh -> chạy thêm bản sao
+    var h = j.currentBatch; if (h >= total || j.results[h]) return;
+    var set = live.get(h); if (!set || set.size !== 1 || firstStart[h] === undefined) return;
+    if (Date.now() - firstStart[h] < Math.max(S.cfg.hedgeMinMs, 2.5 * medianDur())) return;
+    var prim = Array.from(set)[0]; lastKey[h] = prim.keyIndex;
+    P.hedges++; log('Batch ' + (h + 1) + ' chạy quá lâu (' + Math.round((Date.now() - firstStart[h]) / 1000) + 's) và đang chặn ' + Object.keys(j.results).length + ' batch đã xong — chạy thêm bản dự phòng trên key khác', 'warn');
+    launch(h, true);
+  }
 
   while (j.currentBatch < total && !S.stop && !halt && !saveErr) {
     var eff = effectiveConcurrency();
-    while (running.size < eff && !S.stop && !halt) { var i = nextIdx(); if (i < 0) break; launch(i); } // worker nào xong -> vòng này giao NGAY batch kế tiếp, không chờ worker chậm
+    while (running.size < eff && !S.stop && !halt) { var i = nextIdx(); if (i < 0) break; launch(i, false); } // worker nào xong -> vòng này giao NGAY batch kế tiếp, không chờ worker chậm
+    if (!S.stop && !halt && running.size < eff && nextIdx() < 0) maybeHedge();
     var now2 = Date.now(); if (now2 - lastProg > 400) { lastProg = now2; progress(); }
     await new Promise(function (r) { wakeFn = r; setTimeout(r, 250); });
   }
@@ -8183,7 +8207,7 @@ function renderPar(s) {
   var wl = { running: 'đang xử lý', done: '✓', idle: 'rảnh', cooldown: 'cooldown 429', off: 'tắt/lỗi key' };
   var h = '<div class="sfsum-parhead">🤖 Summary Engine <span>· Parallel: <b>' + p.effective + ' / ' + p.limit + '</b> (' + p.keysAvailable + '/' + p.keys + ' key khả dụng' + (p.waitingForKey ? ', ' + p.waitingForKey + ' đang chờ key' : '') + ')</span></div>' +
     '<div class="sfsum-parstats"><span>Completed: <b>' + fmt(p.completed) + ' / ' + fmt(s.totalBatches) + '</b></span><span>Running: <b>' + p.running + '</b></span><span>Pending: <b>' + fmt(p.pending) + '</b></span><span>Failed: <b>' + p.failed + '</b></span>' +
-    (p.heldForOrder ? '<span>Chờ tới lượt gộp: <b>' + p.heldForOrder + '</b></span>' : '') + (p.retries ? '<span>Retry: <b>' + p.retries + '</b></span>' : '') + '</div><div class="sfsum-workers">';
+    (p.heldForOrder ? '<span>Chờ tới lượt gộp: <b>' + p.heldForOrder + '</b></span>' : '') + (p.retries ? '<span>Retry: <b>' + p.retries + '</b></span>' : '') + (p.hedges ? '<span>Dự phòng: <b>' + p.hedges + '</b></span>' : '') + '</div><div class="sfsum-workers">';
   p.workers.forEach(function (w) {
     h += '<div class="sfsum-w ' + w.state + '">C' + (w.key + 1) + ' → ' + (w.batch >= 0 ? 'Batch ' + fmt(w.batch + 1) : '—') + ' → ' + wl[w.state] + '</div>';
   });
