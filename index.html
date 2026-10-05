@@ -987,6 +987,8 @@
         <button class="btn small" id="sfSumModeSecrets">🔮 Bí mật / 伏笔</button>
         <button class="btn small" id="sfSumModeTimeline">🕰 Timeline</button>
         <button class="btn small" id="sfSumModeRel">🔗 Quan hệ</button>
+        <button class="btn small" id="sfSumModeFamily">🌳 Gia phả (AI tự tạo)</button>
+        <button class="btn small" id="sfSumModeAudit">🔎 Soát mâu thuẫn (AI)</button>
       </div>
       <div class="sfv" id="sfSumViewer" style="display:none;"></div>
       <div class="sfsum-chat" id="sfSumChatBox"></div>
@@ -7279,7 +7281,7 @@ PHẦN 8: CHI TIẾT ĐẶC BIỆT
   function renderList(){
     var wrap = document.getElementById('sfSumPLList'); if(!wrap) return;
     var ord = L.filter(function(p){return p.type==='core';}).concat(L.filter(function(p){return p.type!=='core';}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0);}));
-    wrap.innerHTML = ord.filter(function(p){ return showAll || p.enabled || (p.type==='core' && !(p.content||'').trim()); }).map(function(p){
+    var rowsHtml = ord.filter(function(p){ return showAll || p.enabled; }).map(function(p){
       return '<div class="sfsp-card" data-id="'+esc(p.id)+'" style="border:1px solid var(--panel-border); border-radius:10px; padding:10px 12px; margin-bottom:10px; background:var(--input-bg);">' +
         '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
         '<div class="switch sfsp-sw '+(p.enabled?'on':'')+'" title="Bật/Tắt prompt này"></div>' +
@@ -7289,6 +7291,7 @@ PHẦN 8: CHI TIẾT ĐẶC BIỆT
         (p.type==='core' ? '' : '<button type="button" class="btn small danger" data-act="del">🗑 Xoá</button>') + '</div></div>' +
         '<textarea class="sfsp-txt" rows="4" style="font-size:12.5px;" placeholder="'+(p.type==='core'?'Dán prompt của bạn vào đây…':'Nội dung prompt…')+'">'+esc(p.content)+'</textarea></div>';
     }).join('');
+    wrap.innerHTML = rowsHtml || '<div class="hint">Chưa chọn prompt nào — bấm một nút ở trên để dùng. Chỉ prompt được chọn mới hiện ở đây.</div>';
     var btn = document.getElementById('sfSumPLShowAll'); if(btn) btn.textContent = showAll ? '🙈 Ẩn prompt đã tắt' : '👁 Hiện cả prompt đã tắt';
   }
   function refresh(){ save(); renderList(); highlight(); }
@@ -7583,6 +7586,7 @@ function addContra(m, text, chapter, kind) {
 function mergeCharInto(m, t, o) {
   uniqPush(t.aliases, [o.name].concat(o.aliases), 40);
   uniqPush(t.skills, o.skills, 60);
+  if (o.age && (!t.age || o.lastChapter >= t.lastChapter)) t.age = o.age; t.ageHistory = (t.ageHistory || []).concat(o.ageHistory || []);
   t.description = joinUniq(t.description, o.description, 900);
   t.identity = joinUniq(t.identity, o.identity, 400);
   if (!t.faction && o.faction) t.faction = o.faction;
@@ -7609,7 +7613,7 @@ function mergeCharInto(m, t, o) {
   regChar(m._ix, t);
 }
 function newChar(m, name, ch) {
-  var c = { id: nid(m, 'c'), name: str(name, 100), aliases: [], identity: '', faction: '', factionHistory: [], status: 'unknown', statusChapter: 0,
+  var c = { id: nid(m, 'c'), name: str(name, 100), aliases: [], identity: '', age: '', ageHistory: [], faction: '', factionHistory: [], status: 'unknown', statusChapter: 0,
     realm: '', realmHistory: [], skills: [], description: '', firstChapter: ch, lastChapter: ch, appearances: 0, confidence: 'confirmed', needsCheck: false };
   m.characters.push(c); regChar(m._ix, c); return c;
 }
@@ -7642,6 +7646,7 @@ function mergeCharacter(m, d, ctx) {
     t.status = st; t.statusChapter = ch.n;
   }
   if (d.realm && norm(d.realm) !== norm(t.realm)) { t.realm = d.realm; t.realmHistory.push({ realm: d.realm, chapter: ch.n }); }
+  if (d.age && norm(d.age) !== norm(t.age)) { t.age = d.age; (t.ageHistory = t.ageHistory || []).push({ age: d.age, chapter: ch.n }); }
   uniqPush(t.skills, d.skills, 60);
   t.description = joinUniq(t.description, d.description, 900);
   t.firstChapter = Math.min(t.firstChapter, ch.n); t.lastChapter = Math.max(t.lastChapter, ch.n);
@@ -7701,7 +7706,7 @@ function sfSumNormalizeDelta(raw) {
   var d = raw && typeof raw === 'object' ? raw : {};
   function strs(v) { return arr(v).map(function (x) { return str(x, 120); }).filter(Boolean); }
   return {
-    characters: arr(d.characters).map(function (c) { c = c || {}; return { name: str(c.name, 100), aliases: strs(c.aliases), identity: str(c.identity, 300), faction: str(c.faction, 100),
+    characters: arr(d.characters).map(function (c) { c = c || {}; return { name: str(c.name, 100), aliases: strs(c.aliases), identity: str(c.identity, 300), age: str(c.age, 40), faction: str(c.faction, 100),
       status: str(c.status, 40), realm: str(c.realm, 100), skills: strs(c.skills), description: str(c.description, 500), chapter: c.chapter, confidence: c.confidence }; }),
     relations: arr(d.relations).map(function (r) { r = r || {}; return { from: str(r.from, 100), to: str(r.to, 100), type: str(r.type, 60), detail: str(r.detail, 300), chapter: r.chapter, confidence: r.confidence }; }),
     locations: arr(d.locations).map(function (x) { x = x || {}; return { name: str(x.name, 100), description: str(x.description, 400), chapter: x.chapter }; }),
@@ -7804,7 +7809,7 @@ function sfSumCompress(m, opts) {
 /* ----------------------- 6. CONTEXT BUILDER ----------------------- */
 function cChar(c) {
   var o = { name: c.name }; if (c.aliases.length) o.aliases = c.aliases.slice(0, 6);
-  if (c.identity) o.identity = c.identity.slice(0, 160); if (c.faction) o.faction = c.faction; o.status = c.status; if (c.realm) o.realm = c.realm;
+  if (c.identity) o.identity = c.identity.slice(0, 160); if (c.faction) o.faction = c.faction; o.status = c.status; if (c.age) o.age = c.age; if (c.realm) o.realm = c.realm;
   if (c.skills.length) o.skills = c.skills.slice(-6); if (c.description) o.desc = c.description.slice(0, 200);
   o.first = c.firstChapter; o.last = c.lastChapter; if (c.needsCheck) o.needsCheck = true; return o;
 }
@@ -7853,7 +7858,7 @@ function sfSumBuildContext(m, text, budget, extra) {
 }
 
 /* ------------------------- 7. PROMPTS ------------------------- */
-var SCHEMA = '{"characters":[{"name":"","aliases":[],"identity":"","faction":"","status":"alive|dead|missing|unknown","realm":"","skills":[],"description":"","chapter":0,"confidence":"confirmed|uncertain"}],' +
+var SCHEMA = '{"characters":[{"name":"","aliases":[],"identity":"","faction":"","status":"alive|dead|missing|unknown","age":"","realm":"","skills":[],"description":"","chapter":0,"confidence":"confirmed|uncertain"}],' +
   '"relations":[{"from":"","to":"","type":"bạn|thù|sư đồ|đồng minh|gia đình|đối thủ|cấp trên|cấp dưới|chưa xác định|...","detail":"","chapter":0,"confidence":""}],' +
   '"locations":[{"name":"","description":"","chapter":0}],"organizations":[{"name":"","description":"","members":[],"chapter":0}],' +
   '"powerSystems":[{"name":"","description":"","levels":["thứ tự từ thấp đến cao"],"chapter":0}],"items":[{"name":"","description":"","owner":"","chapter":0}],' +
@@ -7875,7 +7880,8 @@ function sfSumBuildBatchPrompt(ctxJson, b, chapterList, pieceInfo, bodyText) {
     '7. Flashback: isFlashback=true (kèm storyTime nếu biết), nhưng "chapter" vẫn là chương nơi nó được kể.\n' +
     '8. Mọi "chapter" phải là SỐ CHƯƠNG GỐC ghi trong văn bản, nằm trong khoảng ' + b.chapterStart + '–' + b.chapterEnd + '. Không chắc → confidence:"uncertain".\n' +
     '9. Mỗi chương trong phần này PHẢI có một mục trong "chapterSummaries". Mô tả viết tiếng Việt, ngắn gọn nhưng đủ ý; tên riêng giữ nguyên theo nguồn.\n' +
-    '10. Nếu một thread/bí mật trong Memory đã được giải quyết ở phần này, đưa vào "resolvedThreads" (dùng đúng id).\n\n' +
+    '10. Nếu một thread/bí mật trong Memory đã được giải quyết ở phần này, đưa vào "resolvedThreads" (dùng đúng id).\n' +
+    '11. Trường "age" của nhân vật: ghi tuổi tại thời điểm trong phần này khi văn bản nêu rõ (vd "17 tuổi", "khoảng 30") hoặc suy ra chắc chắn từ mốc thời gian/năm sinh; không chắc thì để chuỗi rỗng, TUYỆT ĐỐI không đoán.\n\n' +
     'ĐỊNH DẠNG: CHỈ trả về MỘT đối tượng JSON hợp lệ (không markdown, không lời dẫn). Trường nào không có thì để mảng rỗng/chuỗi rỗng. Schema:\n' + SCHEMA + '\n\n' +
     '[STORY MEMORY LIÊN QUAN (JSON)]\n' + ctxJson + '\n\n' +
     '[CÁC CHƯƠNG TRONG PHẦN NÀY]\n' + chapterList + '\n\n' +
@@ -8502,7 +8508,7 @@ function sfSumLocalView(kind, page, size) {
   size = size || 40; page = page || 0; var lines = [], byId = new Map(m.characters.map(function (c) { return [c.id, c]; }));
   if (kind === 'characters') m.characters.slice().sort(function (a, b) { return b.appearances - a.appearances; }).forEach(function (c) {
     lines.push(c.name + (c.aliases.length ? ' (' + c.aliases.slice(0, 5).join(', ') + ')' : '') + ' — ' + c.status + (c.realm ? ' · ' + c.realm : '') + (c.faction ? ' · phe: ' + c.faction : '') +
-      ' · ch.' + c.firstChapter + '→' + c.lastChapter + (c.identity ? ' · ' + c.identity.slice(0, 120) : '') + (c.confidence === 'uncertain' || c.needsCheck ? ' ⚠ cần kiểm tra' : ''));
+      ' · ch.' + c.firstChapter + '→' + c.lastChapter + (c.age ? ' · ' + c.age : '') + (c.identity ? ' · ' + c.identity.slice(0, 120) : '') + (c.confidence === 'uncertain' || c.needsCheck ? ' ⚠ cần kiểm tra' : ''));
   });
   else if (kind === 'events') m.events.filter(function (e) { return e.importance >= 4; }).sort(function (a, b) { return a.chapter - b.chapter; }).forEach(function (e) {
     lines.push('Ch.' + e.chapter + ' [' + e.kind + (e.confidence === 'uncertain' ? ', chưa chắc' : '') + '] ' + e.event + (e.consequence ? ' ⇒ ' + e.consequence : ''));
@@ -8528,7 +8534,7 @@ var api = { CFG_DEFAULT: CFG_DEFAULT, S: S, norm: norm, sfSumSplitRange: sfSumSp
   sfSumMergeDelta: sfSumMergeDelta, sfSumCompress: sfSumCompress, sfSumBuildContext: sfSumBuildContext, sfSumParseJSON: sfSumParseJSON,
   sfSumPrepare: sfSumPrepare, sfSumRun: sfSumRun, sfSumReset: sfSumReset, sfSumAsk: sfSumAsk, sfSumCompile: sfSumCompile, sfSumParseRange: sfSumParseRange,
   sfSumIntent: sfSumIntent, sfSumLocalView: sfSumLocalView, makeMemStore: makeMemStore, makeIdbStore: makeIdbStore, snapshot: snapshot, counts: counts,
-  effectiveConcurrency: effectiveConcurrency, keyAvailCount: keyAvailCount, runPool: runPool, sfSumParseChapters: sfSumParseChapters, viNum: viNum,
+  effectiveConcurrency: effectiveConcurrency, keyAvailCount: keyAvailCount, runPool: runPool, sfSumParseChapters: sfSumParseChapters, viNum: viNum, callText: callText,
   stop: function () { S.stop = true; if (S.ac) S.ac.abort(); } };
 root.SFSum = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -8708,6 +8714,49 @@ $('sfSumModeEvents').onclick = function () { openView('events', '⚡ Sự kiện
 $('sfSumModeSecrets').onclick = function () { openView('secrets', '🔮 Bí mật / 伏笔 / việc chưa giải quyết'); };
 $('sfSumModeTimeline').onclick = function () { openView('timeline', '🕰 Timeline'); };
 $('sfSumModeRel').onclick = function () { openView('relations', '🔗 Quan hệ nhân vật'); };
+/* ---- AI tự đọc dữ liệu đã có -> tạo gia phả / soát mâu thuẫn (v15.7h) ---- */
+function kinKey() { return 'sfSumKin_' + (S.job ? S.job.id : 'x'); }
+function memPack() {
+  var byId = new Map(S.mem.characters.map(function (c) { return [c.id, c]; }));
+  var chars = S.mem.characters.slice().sort(function (a, b) { return (b.appearances || 0) - (a.appearances || 0); }).slice(0, 150).map(function (c) {
+    return { name: c.name, aliases: (c.aliases || []).slice(0, 3), age: c.age || undefined, ageHistory: (c.ageHistory || []).slice(-3), status: c.status, statusChapter: c.statusChapter, realm: c.realm, faction: c.faction, first: c.firstChapter, last: c.lastChapter, identity: (c.identity || '').slice(0, 140), desc: (c.description || '').slice(0, 160) };
+  });
+  var rels = S.mem.relations.slice(0, 500).map(function (r) { var a = byId.get(r.a), b = byId.get(r.b); return a && b ? { from: a.name, to: b.name, type: r.type, detail: (r.detail || '').slice(0, 100) } : null; }).filter(Boolean);
+  return { chars: chars, rels: rels };
+}
+async function autoFamily() {
+  if (busy) return; if (!S.mem || !S.mem.characters.length) { alert('Chưa có dữ liệu. Hãy bấm “Bắt đầu đọc” trước.'); return; }
+  var have = null; try { have = JSON.parse(localStorage.getItem(kinKey()) || 'null'); } catch (e) {}
+  if (have && have.fam && !confirm('Đã có gia phả. OK = AI tạo lại · Huỷ = xem bản hiện có.')) { openView('family'); return; }
+  busy = true; var wait = appendMsg('bot', '⏳ AI đang đọc dữ liệu và dựng gia phả…', true);
+  try {
+    readCfg(); var d = memPack();
+    var prompt = 'Bạn là chuyên gia lập gia phả cho truyện. Từ DỮ LIỆU dưới đây (nhân vật + quan hệ; chú ý trường detail/identity/desc), hãy suy ra quan hệ huyết thống/hôn nhân.\n' +
+      'QUY TẮC: chỉ dùng thông tin có trong dữ liệu, KHÔNG bịa; giữ đúng tên như dữ liệu; hướng from→to trong quan hệ có thể mơ hồ nên hãy đọc detail để xác định ai là cha/mẹ, ai là con; không chắc thì bỏ qua.\n' +
+      'CHỈ trả về MỘT JSON hợp lệ (không markdown): {"parents":[{"parent":"tên cha/mẹ","child":"tên con","kind":"cha|mẹ|cha nuôi|mẹ nuôi"}],"couples":[{"a":"","b":""}]}\n\n[NHÂN VẬT]\n' + JSON.stringify(d.chars) + '\n\n[QUAN HỆ]\n' + JSON.stringify(d.rels);
+    var j = SFSum.sfSumParseJSON(await SFSum.callText(prompt)).value || {};
+    var fam = { parents: (j.parents || []).filter(function (e) { return e && e.parent && e.child; }), couples: (j.couples || []).filter(function (e) { return e && e.a && e.b; }) };
+    try { localStorage.setItem(kinKey(), JSON.stringify({ fam: fam, at: Date.now() })); } catch (e) {}
+    wait.remove(); appendMsg('bot', '✅ AI đã dựng gia phả: ' + fam.parents.length + ' quan hệ cha/mẹ–con, ' + fam.couples.length + ' cặp vợ chồng.', true); openView('family');
+  } catch (e) { wait.remove(); appendMsg('bot', e.aborted ? 'Đã huỷ.' : '⚠️ Lỗi: ' + (e.message || e), true); }
+  finally { busy = false; }
+}
+async function autoAudit() {
+  if (busy) return; if (!S.mem || !S.mem.characters.length) { alert('Chưa có dữ liệu. Hãy bấm “Bắt đầu đọc” trước.'); return; }
+  busy = true; var wait = appendMsg('bot', '⏳ AI đang soát mâu thuẫn và lỗ hổng cốt truyện…', true);
+  try {
+    readCfg(); var d = memPack(), m = S.mem;
+    var prompt = 'Bạn là biên tập viên soát lỗi cốt truyện. Chỉ dựa vào DỮ LIỆU dưới đây (không dùng kiến thức ngoài, không bịa), hãy liệt kê:\n' +
+      '1) Nhân vật đã chết nhưng sau đó vẫn xuất hiện (so statusChapter với last).\n2) Tuổi/mốc thời gian lệch nhau giữa các chương hoặc giữa các nhân vật (cha mẹ – con, anh chị em…).\n3) Thân phận/tên/biệt danh có dấu hiệu trùng hoặc nhầm người.\n4) Cảnh giới hoặc phe phái đổi bất thường.\n5) Bí mật/việc dang dở treo lâu chưa giải.\n' +
+      'Mỗi mục: mô tả ngắn + số chương liên quan + độ chắc chắn (chắc / nghi ngờ). Mục nào không có thì ghi “không phát hiện”. Trả lời tiếng Việt, gọn, dạng danh sách.\n\n[NHÂN VẬT]\n' + JSON.stringify(d.chars) +
+      '\n\n[MÂU THUẪN ĐÃ GHI NHẬN]\n' + JSON.stringify((m.contradictions || []).slice(-60).map(function (x) { return { text: x.text, chapter: x.chapter }; })) +
+      '\n\n[VIỆC DANG DỞ]\n' + JSON.stringify((m.unresolvedThreads || []).slice(0, 40).map(function (t) { return { text: (t.text || '').slice(0, 160), chapter: t.chapter }; }));
+    var txt = await SFSum.callText(prompt); wait.remove(); appendMsg('bot', '🔎 BÁO CÁO SOÁT MÂU THUẪN\n\n' + txt);
+  } catch (e) { wait.remove(); appendMsg('bot', e.aborted ? 'Đã huỷ.' : '⚠️ Lỗi: ' + (e.message || e), true); }
+  finally { busy = false; }
+}
+$('sfSumModeFamily').onclick = autoFamily; $('sfSumModeAudit').onclick = autoAudit;
+
 $('sfSumChapRe').addEventListener('change', function () { if (!S.running) refreshSource(true); });
 $('sfSumParallel').addEventListener('change', function () { readCfg(); render(); });
 $('sfSumBatchChars').addEventListener('change', function () { if (S.job && S.job.currentBatch === 0 && !S.running) refreshSource(true); });
@@ -8756,6 +8805,97 @@ function catOf(type) { var t = tok(type); for (var i = 0; i < CATS.length - 1; i
 
 var STAT = { alive: ['Còn sống', '#3ecf8e'], dead: ['Đã chết', '#ff6b6b'], missing: ['Mất tích', '#ffb347'], unknown: ['Không rõ', '#8b93b8'] };
 function statOf(c) { var s = String(c.status || '').toLowerCase(); return STAT[s] || (/chết|dead|die/.test(s) ? STAT.dead : /sống|alive/.test(s) ? STAT.alive : /mất tích|missing/.test(s) ? STAT.missing : STAT.unknown); }
+/* ---- tuổi + phân tích mạng + mũi tên hướng (v15.7h) ---- */
+function ageOf(c) {
+  if (c.age) return { t: String(c.age), ai: true };
+  var m = /(\d{1,3})\s*tuổi/i.exec((c.identity || '') + ' | ' + (c.description || ''));
+  return m ? { t: m[1] + ' tuổi', ai: false } : null;
+}
+var SYM = /bạn|thù|địch|đồng minh|đối thủ|gia đình|anh em|chị em|vợ chồng|phu thê|người yêu|tình nhân|đạo lữ|hôn|họ hàng|đồng môn|đồng đội|hợp tác|cạnh tranh|chưa xác định/i;
+function relDir(p, id) { var o = false, i = false; p.rels.forEach(function (r) { if (SYM.test(r.type || '')) return; if (r.a === id) o = true; else i = true; }); return { out: o, inn: i }; }
+function arrowEl(x1, y1, x2, y2, gap, color) {
+  var dx = x2 - x1, dy = y2 - y1, d = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / d, uy = dy / d, tx = x2 - ux * gap, ty = y2 - uy * gap, s = 7;
+  var pts = [tx, ty, tx - ux * s - uy * s * 0.5, ty - uy * s + ux * s * 0.5, tx - ux * s + uy * s * 0.5, ty - uy * s - ux * s * 0.5].map(function (v) { return v.toFixed(1); });
+  return sv('polygon', { points: pts[0] + ',' + pts[1] + ' ' + pts[2] + ',' + pts[3] + ' ' + pts[4] + ',' + pts[5], fill: color });
+}
+function relStats(md) {
+  var ids = md.m.characters.filter(function (c) { return c._deg > 0; }), n = ids.length, e = md.pairs.length, par = {};
+  ids.forEach(function (c) { par[c.id] = c.id; });
+  function f(x) { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; }
+  md.pairs.forEach(function (p) { if (par[p.a] !== undefined && par[p.b] !== undefined) par[f(p.a)] = f(p.b); });
+  var comps = {}; ids.forEach(function (c) { var k = f(c.id); comps[k] = (comps[k] || 0) + 1; });
+  var cs = Object.keys(comps).map(function (k) { return comps[k]; }).sort(function (a, b) { return b - a; });
+  var dens = n > 1 ? 2 * e / (n * (n - 1)) : 0, avg = n ? 2 * e / n : 0, hubs = ids.slice().sort(function (a, b) { return b._deg - a._deg; }).slice(0, 5);
+  function cell(v, l) { return el('div', { style: 'flex:1 1 88px;background:#0e1020;border:1px solid #23274a;border-radius:10px;padding:7px 8px;text-align:center;' }, [el('div', { style: 'font-size:16px;font-weight:700;color:#e8ebff;', text: v }), el('div', { style: 'font-size:10.5px;color:#8b93b8;', text: l })]); }
+  return el('div', { style: 'margin:8px 0 10px;' }, [
+    el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;' }, [cell(fmt(n), 'nhân vật'), cell(fmt(e), 'cặp quan hệ'), cell(avg.toFixed(1), 'bậc trung bình'), cell((dens * 100).toFixed(1) + '%', 'mật độ mạng'), cell(fmt(cs.length), 'cụm tách rời' + (cs.length > 1 ? ' (lớn nhất ' + cs[0] + ')' : ''))]),
+    el('div', { class: 'sfv-hint', text: 'Nhân vật trung tâm (nhiều quan hệ nhất) — chạm để xem riêng:' }),
+    el('div', { class: 'sfv-chips' }, hubs.map(function (c) { return el('button', { class: 'sfv-chip', text: c.name + ' · ' + c._deg, onclick: function () { st.focus = c.id; st.zoom = 1; draw(); } }); }))]);
+}
+function ageNum(c) { var a = ageOf(c); if (!a) return null; var m = /\d+/.exec(a.t); return m ? parseInt(m[0], 10) : null; }
+function charCmp(a, b) {
+  var k = st.sort || 'app';
+  if (k === 'name') return String(a.name).localeCompare(String(b.name), 'vi');
+  if (k === 'age') { var x = ageNum(a), y = ageNum(b); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return x - y; }
+  return (b.appearances || 0) - (a.appearances || 0);
+}
+function pathBox(md, c) {
+  var dl = el('datalist', { id: 'sfvNames' }, md.m.characters.filter(function (x) { return x._deg > 0 && x !== c; }).map(function (x) { return el('option', { value: x.name }); }));
+  var inp = el('input', { class: 'sfv-search', type: 'text', list: 'sfvNames', placeholder: '🧭 Tìm đường nối từ ' + c.name + ' tới… (gõ tên)' });
+  var out = el('div', { class: 'sfv-rels' });
+  inp.onchange = function () {
+    out.textContent = ''; var q = inp.value.trim().toLowerCase(); if (!q) return;
+    var t = md.m.characters.filter(function (x) { return x._deg > 0 && (String(x.name).toLowerCase() === q || (x.aliases || []).some(function (a) { return String(a).toLowerCase() === q; })); })[0];
+    if (!t) { out.appendChild(el('div', { text: 'Không tìm thấy nhân vật này (cần có quan hệ trong dữ liệu).' })); return; }
+    var adj = {}; md.pairs.forEach(function (p) { (adj[p.a] = adj[p.a] || []).push([p.b, p]); (adj[p.b] = adj[p.b] || []).push([p.a, p]); });
+    var prev = {}; prev[c.id] = null; var qu = [c.id];
+    while (qu.length && !(t.id in prev)) { var u = qu.shift(); (adj[u] || []).forEach(function (e) { if (!(e[0] in prev)) { prev[e[0]] = [u, e[1]]; qu.push(e[0]); } }); }
+    if (!(t.id in prev)) { out.appendChild(el('div', { text: 'Không có đường nối nào giữa hai nhân vật trong dữ liệu đã đọc.' })); return; }
+    var chain = [], cur = t.id; while (prev[cur]) { chain.unshift([cur, prev[cur][1]]); cur = prev[cur][0]; }
+    out.appendChild(el('div', { text: '📍 Độ phân cách: ' + chain.length + ' bước' }));
+    var from = c; chain.forEach(function (step) {
+      var to = md.byId.get(step[0]), types = step[1].rels.map(function (r) { return r.type; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(' / ');
+      out.appendChild(el('div', { text: from.name + ' —[' + types + ']— ' + to.name })); from = to;
+    });
+  };
+  return el('div', { style: 'margin:8px 0;' }, [dl, inp, out]);
+}
+function drawFamily(md) {
+  var d = null; try { d = JSON.parse(localStorage.getItem('sfSumKin_' + (S.job ? S.job.id : 'x')) || 'null'); } catch (e) {}
+  if (!d || !d.fam || !((d.fam.parents || []).length || (d.fam.couples || []).length)) { bodyEl.appendChild(empty('Chưa có gia phả. Bấm “🌳 Gia phả (AI tự tạo)” để AI đọc dữ liệu và dựng tự động.')); return; }
+  function kn(x) { return String(x || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  var idx = {}; md.m.characters.forEach(function (c) { idx[kn(c.name)] = c; (c.aliases || []).forEach(function (a) { if (!idx[kn(a)]) idx[kn(a)] = c; }); });
+  var nodes = {}, order = [];
+  function nd(name) { var c = idx[kn(name)], key = c ? c.id : 'g:' + kn(name); if (!nodes[key]) { nodes[key] = { key: key, c: c, name: c ? c.name : String(name), par: [], kids: [], sp: [], lv: 0, x: 0 }; order.push(key); } return nodes[key]; }
+  (d.fam.parents || []).forEach(function (e) { var p = nd(e.parent), ch = nd(e.child); if (p !== ch && p.kids.indexOf(ch.key) < 0) { p.kids.push(ch.key); ch.par.push(p.key); } });
+  (d.fam.couples || []).forEach(function (e) { var a = nd(e.a), b = nd(e.b); if (a !== b && a.sp.indexOf(b.key) < 0) { a.sp.push(b.key); b.sp.push(a.key); } });
+  if (order.length > 120) order = order.slice(0, 120);
+  for (var it = 0; it < order.length + 2; it++) { var chg = false; order.forEach(function (k) { var n = nodes[k]; n.par.forEach(function (pk) { if (nodes[pk].lv < order.length && nodes[pk].lv + 1 > n.lv) { n.lv = nodes[pk].lv + 1; chg = true; } }); n.sp.forEach(function (sk) { if (nodes[sk].lv > n.lv) { n.lv = nodes[sk].lv; chg = true; } }); }); if (!chg) break; }
+  var maxLv = 0, levels = []; order.forEach(function (k) { var n = nodes[k]; if (n.lv > maxLv) maxLv = n.lv; (levels[n.lv] = levels[n.lv] || []).push(n); });
+  var GX = 74, GY = 112, maxCnt = 1;
+  levels.forEach(function (arr, li) {
+    arr = arr || []; arr.forEach(function (n) { var xs = n.par.map(function (pk) { return nodes[pk].x; }).filter(function (v) { return v; }); n._k = xs.length ? xs.reduce(function (a, b) { return a + b; }, 0) / xs.length : 1e6; });
+    arr.sort(function (a, b) { return a._k - b._k || String(a.name).localeCompare(String(b.name), 'vi'); });
+    var out = [], used = {}; arr.forEach(function (n) { if (used[n.key]) return; out.push(n); used[n.key] = 1; n.sp.forEach(function (sk) { var s2 = nodes[sk]; if (s2 && s2.lv === li && !used[sk]) { out.push(s2); used[sk] = 1; } }); });
+    levels[li] = out; if (out.length > maxCnt) maxCnt = out.length;
+    out.forEach(function (n, i) { n.x = 40 + i * GX + GX / 2; });
+  });
+  var W = Math.max(360, maxCnt * GX + 80), H = (maxLv + 1) * GY + 40;
+  levels.forEach(function (arr) { var off = (W - arr.length * GX) / 2 - 40; arr.forEach(function (n) { n.x += off; }); });
+  levels.forEach(function (arr, li) { arr.forEach(function (n) { n.y = 40 + li * GY; }); });
+  var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img', style: 'width:' + W + 'px;max-width:none;' }), nc = 0;
+  order.forEach(function (k) { var n = nodes[k]; n.kids.forEach(function (ck) { var c2 = nodes[ck]; if (!c2 || order.indexOf(ck) < 0) return; var my = n.y + (c2.y - n.y) / 2; svg.appendChild(sv('path', { d: 'M' + n.x + ',' + (n.y + 16) + ' V' + my + ' H' + c2.x + ' V' + (c2.y - 16), fill: 'none', stroke: '#7ab8ff', 'stroke-width': 1.6, opacity: .8 })); }); });
+  order.forEach(function (k) { var n = nodes[k]; n.sp.forEach(function (sk) { var s2 = nodes[sk]; if (s2 && n.key < s2.key && s2.lv === n.lv) { nc++; svg.appendChild(sv('line', { x1: n.x, y1: n.y, x2: s2.x, y2: s2.y, stroke: '#e6b84d', 'stroke-width': 3, 'stroke-linecap': 'round' })); } }); });
+  order.forEach(function (k) {
+    var n = nodes[k], g;
+    if (n.c) { g = nodeEl(n.c, n.x, n.y, 14); g.onclick = function () { st.kind = 'relations'; st.focus = n.c.id; st.zoom = 1; build(); draw(); }; }
+    else { g = sv('g', {}); g.appendChild(sv('circle', { cx: n.x, cy: n.y, r: 14, fill: '#2a2f4d', stroke: '#8b93b8', 'stroke-dasharray': '3 3' })); g.appendChild(sv('text', { x: n.x, y: n.y + 4, 'text-anchor': 'middle', 'font-size': 11, fill: '#fff', text: '?' })); g.appendChild(sv('text', { x: n.x, y: n.y + 30, 'text-anchor': 'middle', 'font-size': 10.5, class: 'sfv-lbl', text: clip(n.name, 12) })); }
+    svg.appendChild(g);
+  });
+  bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('span', { class: 'sfv-hint', text: fmt(order.length) + ' người · ' + fmt(maxLv + 1) + ' đời · ' + fmt(nc) + ' cặp vợ chồng · tạo lúc ' + new Date(d.at || Date.now()).toLocaleString('vi-VN') })]));
+  bodyEl.appendChild(el('div', { style: 'overflow-x:auto;border:1px solid #23274a;border-radius:12px;background:#0b0d1c;' }, [svg]));
+  bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Đời trên → đời dưới. Đường xanh = cha/mẹ → con, đường vàng = vợ chồng, vòng đứt nét “?” = người chưa có hồ sơ. Chạm nhân vật để mở sơ đồ quan hệ. Gia phả do AI suy ra từ dữ liệu đã đọc — hãy đối chiếu khi cần; bấm lại “🌳 Gia phả” để tạo lại.' }));
+}
 function hue(str) { var h = 0; str = String(str || ''); for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
 function initial(name) { var w = String(name || '?').trim().split(/\s+/); return ((w[0] || '?')[0] || '?').toUpperCase(); }
 
@@ -8801,7 +8941,7 @@ function forceLayout(nodes, edges, W, H) {
 }
 
 var st = { kind: null, q: '', page: 1, focus: null, topN: 18, off: {}, zoom: 1, status: 'all', sub: 'all' };
-var shell = null, bodyEl = null, searchEl = null, titleEl = null, subEl = null, TITLES = { characters: '👥 Nhân vật', relations: '🔗 Sơ đồ quan hệ', events: '⚡ Sự kiện quan trọng', timeline: '🕰 Timeline', secrets: '🔮 Bí mật / 伏笔 / việc chưa giải quyết' };
+var shell = null, bodyEl = null, searchEl = null, titleEl = null, subEl = null, TITLES = { characters: '👥 Nhân vật', relations: '🔗 Sơ đồ quan hệ', family: '🌳 Gia phả (AI tự tạo)', events: '⚡ Sự kiện quan trọng', timeline: '🕰 Timeline', secrets: '🔮 Bí mật / 伏笔 / việc chưa giải quyết' };
 
 function open(kind) {
   if (!S.mem) { alert('Chưa có dữ liệu. Hãy bấm “Bắt đầu đọc” trước.'); return; }
@@ -8825,7 +8965,7 @@ function draw() {
   var done = S.job && S.job.status === 'done';
   subEl.textContent = 'Đã đọc tới chương ' + fmt(md.m.lastChapterNo) + (done ? ' · đã đọc hết file' : ' · CHƯA đọc hết file');
   bodyEl.textContent = '';
-  ({ characters: drawChars, relations: drawRel, events: drawEvents, timeline: drawTimeline, secrets: drawSecrets })[st.kind](md);
+  ({ characters: drawChars, relations: drawRel, family: drawFamily, events: drawEvents, timeline: drawTimeline, secrets: drawSecrets })[st.kind](md);
 }
 function put(n) { if (n) bodyEl.appendChild(n); }
 function empty(msg) { return el('div', { class: 'sfv-empty', text: msg || 'Chưa có dữ liệu loại này.' }); }
@@ -8836,9 +8976,10 @@ function match(q, arr) { if (!q) return true; q = q.toLowerCase(); return arr.jo
 
 /* ---- Nhân vật ---- */
 function drawChars(md) {
-  var all = md.m.characters.slice().sort(function (a, b) { return (b.appearances || 0) - (a.appearances || 0); });
+  var all = md.m.characters.slice().sort(charCmp);
   var cnt = { alive: 0, dead: 0, other: 0 }; all.forEach(function (c) { var s = statOf(c); if (s === STAT.alive) cnt.alive++; else if (s === STAT.dead) cnt.dead++; else cnt.other++; });
   bodyEl.appendChild(chips([['all', 'Tất cả ' + all.length], ['alive', 'Còn sống ' + cnt.alive], ['dead', 'Đã chết ' + cnt.dead], ['other', 'Khác ' + cnt.other]], st.status, function (v) { st.status = v; st.page = 1; draw(); }));
+  bodyEl.appendChild(chips([['app', 'Xuất hiện nhiều'], ['age', 'Tuổi ↑'], ['name', 'Tên A→Z']], st.sort || 'app', function (v) { st.sort = v; st.page = 1; draw(); }));
   var list = all.filter(function (c) {
     var s = statOf(c); if (st.status === 'alive' && s !== STAT.alive) return false; if (st.status === 'dead' && s !== STAT.dead) return false; if (st.status === 'other' && (s === STAT.alive || s === STAT.dead)) return false;
     return match(st.q, [c.name].concat(c.aliases || [], [c.faction, c.realm, c.identity]));
@@ -8848,10 +8989,11 @@ function drawChars(md) {
   shown.forEach(function (c) {
     var s = statOf(c), av = el('div', { class: 'sfv-av', text: initial(c.name) }); av.style.background = 'hsl(' + hue(c.faction || c.name) + ',45%,32%)';
     av.style.boxShadow = '0 0 0 2px ' + s[1];
-    var meta = [c.realm, c.faction ? 'Phe: ' + c.faction : ''].filter(Boolean).join(' · ');
+    var ag = ageOf(c), meta = [ag ? '🎂 ' + ag.t + (ag.ai ? '' : ' (từ mô tả)') : '', c.realm, c.faction ? 'Phe: ' + c.faction : ''].filter(Boolean).join(' · ');
     var kids = [el('div', { class: 'sfv-cardtop' }, [av, el('div', { class: 'sfv-cardname' }, [el('div', { class: 'sfv-name', text: c.name }), meta ? el('div', { class: 'sfv-meta', text: meta }) : null]), badge(s[0], s[1])])];
     kids.push(el('div', { class: 'sfv-meta', text: 'Chương ' + c.firstChapter + ' → ' + c.lastChapter + ' · ' + fmt(c.appearances || 0) + ' lần xuất hiện' + (c.confidence === 'uncertain' || c.needsCheck ? ' · ⚠ cần kiểm tra' : '') }));
     if (c.aliases && c.aliases.length) kids.push(el('div', { class: 'sfv-alias' }, c.aliases.slice(0, 6).map(function (a) { return el('span', { text: a }); })));
+    if (c.ageHistory && c.ageHistory.length > 1) kids.push(el('div', { class: 'sfv-meta', text: '🎂 Diễn biến tuổi: ' + c.ageHistory.slice(-4).map(function (h) { return h.age + ' (ch.' + h.chapter + ')'; }).join(' → ') }));
     if (c.identity) { var idt = el('div', { class: 'sfv-ident clamp', text: c.identity }); idt.onclick = function () { idt.classList.toggle('clamp'); }; kids.push(idt); }
     if (c._deg) kids.push(el('button', { class: 'sfv-link', text: '🔗 Xem quan hệ (' + c._deg + ')', onclick: function () { st.kind = 'relations'; st.focus = c.id; st.q = ''; build(); draw(); } }));
     wrap.appendChild(el('div', { class: 'sfv-card' }, kids));
@@ -8884,6 +9026,8 @@ function nodeEl(c, x, y, r, opts) {
   g.appendChild(sv('text', { x: x, y: y + (opts && opts.center ? 6 : 4), 'text-anchor': 'middle', 'font-size': opts && opts.center ? 17 : Math.max(9, r * 0.95), fill: '#fff', 'font-weight': 700, text: initial(c.name) }));
   var lab = clip(c.name, opts && opts.center ? 22 : 12), ly = y + r + 14;
   g.appendChild(sv('text', { x: x, y: ly, 'text-anchor': 'middle', 'font-size': opts && opts.center ? 13 : 10.5, 'font-weight': opts && opts.center ? 700 : 500, class: 'sfv-lbl', text: lab }));
+  var ag = ageOf(c); if (ag && ((opts && opts.center) || r >= 9)) g.appendChild(sv('text', { x: x, y: ly + 11, 'text-anchor': 'middle', 'font-size': 9, fill: '#9aa3c7', text: '🎂 ' + clip(ag.t.replace(/\s*tuổi/i, 't'), 10) }));
+  if (dead) g.appendChild(sv('text', { x: x + r + 2, y: y - r, 'font-size': 11, fill: '#ff6b6b', text: '✝' }));
   return g;
 }
 function graphWrap(svg) {
@@ -8898,25 +9042,28 @@ function drawOverview(md) {
   bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('span', { class: 'sfv-hint', text: 'Hiển thị' }), chips([[12, 'Top 12'], [18, 'Top 18'], [30, 'Top 30']], st.topN, function (v) { st.topN = v; draw(); })]));
   var top = md.m.characters.filter(function (c) { return c._deg > 0; }).sort(function (a, b) { return b._deg - a._deg || (b.appearances || 0) - (a.appearances || 0); }).slice(0, st.topN), ids = new Set(top.map(function (c) { return c.id; }));
   var edges = md.pairs.filter(function (p) { return ids.has(p.a) && ids.has(p.b); }), shownE = edges.filter(function (p) { return !st.off[p.cat]; });
-  bodyEl.appendChild(relLegend(md, edges));
+  bodyEl.appendChild(relStats(md)); bodyEl.appendChild(relLegend(md, edges));
   var pos = forceLayout(top.map(function (c) { return { id: c.id }; }), shownE, W, H), svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img' });
   shownE.forEach(function (p) { var a = pos[p.a], b = pos[p.b]; svg.appendChild(sv('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: CAT[p.cat].color, 'stroke-width': 1.6 + Math.min(1.5, (p.rels.length - 1) * 0.5), opacity: .8, 'stroke-linecap': 'round' })); });
   top.forEach(function (c) { var q = pos[c.id]; svg.appendChild(nodeEl(c, q.x, q.y, 7 + Math.min(9, c._deg * 0.8))); });
   bodyEl.appendChild(graphWrap(svg));
-  bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Chạm vào một nhân vật để xem riêng mạng quan hệ của họ. Viền: xanh = còn sống, đỏ = đã chết, cam = mất tích. Màu đường nối = loại quan hệ.' }));
+  bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Chạm vào một nhân vật để xem riêng mạng quan hệ của họ. Viền: xanh = còn sống, đỏ = đã chết, cam = mất tích. Màu đường nối = loại quan hệ. Trong sơ đồ riêng: mũi tên = chiều quan hệ (cấp bậc/sư đồ/cha mẹ…), nét đứt = chưa chắc, ✝ = đã chết, 🎂 = tuổi.' }));
   var rest = md.m.characters.filter(function (c) { return c._deg > 0 && !ids.has(c.id); }).sort(function (a, b) { return b._deg - a._deg; }).slice(0, 24);
   if (rest.length) { bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Nhân vật khác có quan hệ:' })); bodyEl.appendChild(el('div', { class: 'sfv-chips' }, rest.map(function (c) { return el('button', { class: 'sfv-chip', text: c.name + ' (' + c._deg + ')', onclick: function () { st.focus = c.id; draw(); } }); }))); }
 }
 function drawEgo(md, c) {
   var W = 360, H = 400, cx = W / 2, cy = H / 2, mine = md.pairs.filter(function (p) { return p.a === c.id || p.b === c.id; });
-  bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('button', { class: 'sfv-chip', text: '← Toàn cảnh', onclick: function () { st.focus = null; st.zoom = 1; draw(); } }), el('span', { class: 'sfv-hint', text: fmt(mine.length) + ' nhân vật có quan hệ với ' + c.name })]));
+  bodyEl.appendChild(el('div', { class: 'sfv-bar' }, [el('button', { class: 'sfv-chip', text: '← Toàn cảnh', onclick: function () { st.focus = null; st.zoom = 1; draw(); } }), el('span', { class: 'sfv-hint', text: fmt(mine.length) + ' nhân vật có quan hệ với ' + c.name + (ageOf(c) ? ' (' + ageOf(c).t + ')' : '') })]));
   bodyEl.appendChild(relLegend(md, mine));
   var shownP = mine.filter(function (p) { return !st.off[p.cat]; }).sort(function (x, y) { return CATS.indexOf(CAT[x.cat]) - CATS.indexOf(CAT[y.cat]); }), N = Math.min(shownP.length, 30), ring = shownP.slice(0, N);
-  var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img' }), showLabels = N <= 10, two = N > 14;
+  var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'sfv-svg', role: 'img' }), showLabels = N <= 14, two = N > 16;
   var nodes = [];
   ring.forEach(function (p, i) {
     var o = md.byId.get(p.a === c.id ? p.b : p.a), a = 2 * Math.PI * i / N - Math.PI / 2, rr = two ? (i % 2 ? 0.62 : 1) : 1, x = cx + Math.cos(a) * 128 * rr, y = cy + Math.sin(a) * 150 * rr;
-    svg.appendChild(sv('line', { x1: cx, y1: cy, x2: x, y2: y, stroke: CAT[p.cat].color, 'stroke-width': 2, opacity: .85, 'stroke-linecap': 'round' }));
+    var ln = { x1: cx, y1: cy, x2: x, y2: y, stroke: CAT[p.cat].color, 'stroke-width': 2, opacity: .85, 'stroke-linecap': 'round' };
+    if (p.rels.every(function (r) { return r.confidence === 'uncertain'; })) ln['stroke-dasharray'] = '5 4';
+    svg.appendChild(sv('line', ln));
+    var dr = relDir(p, c.id); if (dr.out) svg.appendChild(arrowEl(cx, cy, x, y, 15, CAT[p.cat].color)); if (dr.inn) svg.appendChild(arrowEl(x, y, cx, cy, 27, CAT[p.cat].color));
     nodes.push([o, x, y, p]);
   });
   if (showLabels) nodes.forEach(function (n) {
@@ -8928,6 +9075,7 @@ function drawEgo(md, c) {
   nodes.forEach(function (n) { svg.appendChild(nodeEl(n[0], n[1], n[2], 10)); });
   svg.appendChild(nodeEl(c, cx, cy, 22, { center: true }));
   bodyEl.appendChild(graphWrap(svg));
+  bodyEl.appendChild(pathBox(md, c));
   if (shownP.length > N) bodyEl.appendChild(el('div', { class: 'sfv-hint', text: 'Sơ đồ chỉ vẽ ' + N + '/' + shownP.length + ' quan hệ; xem đầy đủ ở danh sách bên dưới.' }));
   /* danh sách chi tiết, nhóm theo loại */
   var det = el('div', { class: 'sfv-detail' });
@@ -8940,7 +9088,7 @@ function drawEgo(md, c) {
         return dir + ' ' + r.type + ' · từ ch.' + r.sourceChapter + hist;
       });
       var s = statOf(o), row = el('div', { class: 'sfv-row', style: 'border-left-color:' + cat.color }, [
-        el('div', { class: 'sfv-rowtop' }, [el('button', { class: 'sfv-who', text: o.name, onclick: function () { st.focus = o.id; st.zoom = 1; draw(); try { shell.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} } }), badge(s[0], s[1])]),
+        el('div', { class: 'sfv-rowtop' }, [el('button', { class: 'sfv-who', text: o.name + (ageOf(o) ? ' · ' + ageOf(o).t : ''), onclick: function () { st.focus = o.id; st.zoom = 1; draw(); try { shell.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} } }), badge(s[0], s[1])]),
         el('div', { class: 'sfv-rels' }, lines.map(function (l) { return el('div', { text: l }); }))]);
       det.appendChild(row);
     });
