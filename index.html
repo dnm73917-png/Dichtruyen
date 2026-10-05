@@ -7238,7 +7238,7 @@ PHẦN 8: CHI TIẾT ĐẶC BIỆT
   var L = (function(){
     var list = [];
     try{ var raw = window.localStorage.getItem(LS); if(raw){ var o = JSON.parse(raw); if(o && Array.isArray(o.list)) list = o.list; } }catch(e){}
-    coreRecs().forEach(function(c){ if(!list.some(function(p){return p.id===c.id;})) list.push(c); });
+    coreRecs().forEach(function(c){ var ex = list.filter(function(p){return p.id===c.id;})[0]; if(!ex) list.push(c); else if(!String(ex.content||'').trim() && String(c.content||'').trim()) ex.content = c.content; }); // bản lưu trong trình duyệt đang trống mà code có prompt -> lấy prompt trong code
     return list;
   })();
   function save(){ try{ window.localStorage.setItem(LS, JSON.stringify({list:L})); }catch(e){} }
