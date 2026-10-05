@@ -966,6 +966,18 @@
       <div class="sfsum-par" id="sfSumPar" style="display:none;"></div>
       <details class="sfsum-details"><summary>Nhật ký đọc</summary><div id="sfSumLog" class="sfsum-log"></div></details>
 
+      <div id="sfSumPLBox" style="margin:12px 0; padding:10px 12px; border:1px dashed var(--panel-border); border-radius:10px;">
+        <div style="font-weight:600; font-size:13px; margin-bottom:4px;">📝 Prompt tóm tắt</div>
+        <div class="hint" style="margin-bottom:8px;">Bấm 1 nút → chỉ prompt đó được dùng cho mọi yêu cầu tóm tắt / đọc truyện / chat (prompt khác tự tắt, không bị xoá). Không chọn gì = chạy như cũ. Dán nội dung vào 2 mục “AI không giới hạn” bên dưới.</div>
+        <div id="sfSumPLBar" class="btn-row" style="gap:6px; flex-wrap:wrap;"></div>
+        <div id="sfSumPLList" style="margin-top:10px;"></div>
+        <div class="btn-row" style="gap:6px; flex-wrap:wrap; margin-top:6px;">
+          <button type="button" class="btn small" id="sfSumPLAdd">➕ Thêm prompt tuỳ chỉnh</button>
+          <button type="button" class="btn small" id="sfSumPLShowAll">👁 Hiện cả prompt đã tắt</button>
+          <button type="button" class="btn small" id="sfSumPLNone">⭕ Tắt hết (chạy như cũ)</button>
+        </div>
+      </div>
+
       <div class="sfsum-modes">
         <button class="btn small" id="sfSumModeAll">📚 Tóm tắt toàn bộ</button>
         <span class="sfsum-range">chương <input type="number" id="sfSumFrom" min="0" placeholder="từ"> – <input type="number" id="sfSumTo" min="0" placeholder="đến"> <button class="btn small" id="sfSumModeRange">Tóm tắt khoảng chương</button></span>
@@ -7044,6 +7056,164 @@ sfCloud.init();
 </script>
 <script>
 /* =====================================================================
+   PROMPT TÓM TẮT — thư viện riêng cho Chatbot truyện (module độc lập).
+   Lưu localStorage 'sfSumPromptLib_v1'. Prompt đang bật được ghép lên ĐẦU mọi
+   request tóm tắt/đọc/chat qua window.sfSumPromptApply (gọi trong callAI).
+   Không chọn prompt nào = hành vi cũ 100%. Không đụng thư viện prompt dịch.
+   ===================================================================== */
+(function(){
+  var LS = 'sfSumPromptLib_v1';
+  var COMMON = [
+    '[NGUYÊN TẮC CHUNG KHI TÓM TẮT]',
+    '- Trung thành với văn bản nguồn: không bịa, không thêm chi tiết, không dùng kiến thức bên ngoài.',
+    '- Giữ nguyên tên nhân vật, địa danh, môn phái, công pháp, cảnh giới, vật phẩm đúng như nguồn.',
+    '- Phân biệt sự việc đã xảy ra / lời nhân vật nói / suy đoán / bí mật chưa xác nhận.',
+    '- Ghi đủ nguyên nhân → diễn biến → kết quả; không bỏ sót sự kiện then chốt. Tóm tắt trung thực, KHÔNG làm nhẹ đi và KHÔNG thêm thắt.',
+    '- Giữ đúng thứ tự thời gian và số chương; không nhầm chương này với chương khác.',
+    '- Văn phong tóm tắt rõ ràng, súc tích, tiếng Việt tự nhiên.',
+    '- Chỉ dẫn này KHÔNG thay đổi định dạng đầu ra mà yêu cầu bên dưới quy định.'
+  ].join('\n');
+  // [id, emoji, tên, dòng vai trò, [điều cần ưu tiên ghi nhận]]
+  var GENRES = [
+    ['tienhiep','⚔️','Tiên kiếm hiệp','Bạn là nhà phân tích truyện chuyên thể loại tu tiên/kiếm hiệp. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi rõ công pháp, cảnh giới, bảo bối, võ học xuất hiện và ai sở hữu',
+      'Ghi đột phá cảnh giới, thay đổi tu vi của từng nhân vật',
+      'Ghi tông môn, thế lực, ân oán, các trận đánh và kết quả',
+      'Ghi bí cảnh, cơ duyên, thân phận ẩn']],
+    ['tieuthuyet','📖','Tiểu thuyết','Bạn là biên tập viên văn học chuyên nghiệp. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Nêu cốt truyện chính, nhân vật chính và diễn biến theo thứ tự',
+      'Ghi mâu thuẫn, bước ngoặt, quyết định quan trọng của nhân vật',
+      'Ghi tình tiết còn bỏ ngỏ để chương sau nối tiếp',
+      'Không đánh giá, không bình luận, chỉ tóm tắt']],
+    ['ngontinh','💕','Ngôn tình','Bạn là nhà phân tích truyện chuyên thể loại ngôn tình. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi diễn biến tình cảm, mốc quan hệ giữa các nhân vật (gặp gỡ, hiểu lầm, xác định quan hệ, chia ly...)',
+      'Ghi cảm xúc, động cơ của từng nhân vật khi nguồn nêu rõ',
+      'Ghi nhân vật thứ ba, hiểu lầm, bí mật ảnh hưởng đến chuyện tình',
+      'Giữ nguyên cách xưng hô và mối quan hệ như nguồn']],
+    ['vohiep','🗡️','Võ hiệp giang hồ','Bạn là nhà phân tích truyện chuyên thể loại võ hiệp giang hồ. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi võ công, chiêu thức, binh khí, bang phái, môn phái xuất hiện',
+      'Ghi ân oán giang hồ, ai đối đầu ai, kết quả giao đấu',
+      'Ghi biệt hiệu, thân phận thật, lời thề, lời hứa',
+      'Ghi bí kíp, bảo vật, âm mưu đang diễn ra']],
+    ['cotrang','🏯','Cổ đại / Cung đấu','Bạn là nhà phân tích truyện chuyên thể loại cổ đại, cung đấu, trạch đấu. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi chức danh, phẩm cấp, quan hệ vai vế giữa các nhân vật',
+      'Ghi mưu tính, liên minh, đối đầu và kết quả của từng phe; KHÔNG tự suy diễn thêm mưu mô nguồn không nêu',
+      'Ghi biến động địa vị (thăng, giáng, sủng ái, thất sủng...)',
+      'Ghi bí mật, chứng cứ, manh mối chưa được làm rõ']],
+    ['dothi','🏙️','Đô thị / Hiện đại','Bạn là nhà phân tích truyện chuyên thể loại đô thị, hiện đại. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi nhân vật, công ty, thương hiệu, địa danh và quan hệ giữa họ',
+      'Ghi thay đổi địa vị, tiền bạc, công việc, thế lực của nhân vật chính',
+      'Ghi xung đột, vả mặt, hợp tác, thù oán và kết quả',
+      'Ghi bí mật thân phận và việc chưa giải quyết']],
+    ['huyenhuyen','🐉','Huyền huyễn / Dị giới','Bạn là nhà phân tích truyện chuyên thể loại huyền huyễn, dị giới. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi hệ thống cấp bậc/sức mạnh và vị trí của từng nhân vật trong đó',
+      'Ghi kỹ năng, huyết mạch, dị thú, thần khí, thế lực, đại lục',
+      'Ghi chiến đấu, dị tượng, bước ngoặt và kết quả, không thêm chi tiết mới',
+      'Ghi bí ẩn thế giới, phục bút, nhân vật/thế lực ẩn']],
+    ['xuyenkhong','🔁','Xuyên không / Trọng sinh','Bạn là nhà phân tích truyện chuyên thể loại xuyên không, trọng sinh. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Phân biệt rõ thân phận cũ / thân phận mới, người xuyên/trọng sinh và nguyên chủ',
+      'Ghi mốc thời gian, thông tin “kiếp trước / kiếp này” và ai biết bí mật xuyên không',
+      'Ghi những điều nhân vật thay đổi so với kiếp trước và hệ quả',
+      'Giữ đúng thứ tự sự kiện, không lẫn hồi tưởng với hiện tại']],
+    ['linhdi','👻','Linh dị / Kinh dị','Bạn là nhà phân tích truyện chuyên thể loại linh dị, kinh dị, huyền bí. Hãy tóm tắt chính xác phần truyện được đưa.',[
+      'Ghi quy tắc, lời nguyền, điều cấm kỵ, vật phẩm và địa điểm liên quan',
+      'Ghi từng manh mối, điềm báo, chi tiết bất thường ở đúng vị trí xuất hiện',
+      'Ghi ai gặp chuyện gì, còn sống hay đã chết, nguyên nhân nếu nguồn nêu',
+      'Giữ nguyên mức độ rùng rợn của nguồn, KHÔNG làm nhẹ và KHÔNG thêm chi tiết ghê rợn']]
+  ];
+  function build(g){ return '[' + g[3] + ']\n\nƯU TIÊN GHI NHẬN:\n' + g[4].map(function(x){return '- '+x;}).join('\n') + '\n\n' + COMMON; }
+  function now(){ return Date.now(); }
+  function nid(p){ return p + '_' + now().toString(36) + '_' + Math.random().toString(36).slice(2,7); }
+  function esc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function coreRecs(){ return [
+    {id:'ai_free_1', name:'AI không giới hạn 1', type:'core', content:'', enabled:false, createdAt:1},
+    {id:'ai_free_2', name:'AI không giới hạn 2', type:'core', content:'', enabled:false, createdAt:2} ]; }
+  var L = (function(){
+    var list = [];
+    try{ var raw = window.localStorage.getItem(LS); if(raw){ var o = JSON.parse(raw); if(o && Array.isArray(o.list)) list = o.list; } }catch(e){}
+    coreRecs().forEach(function(c){ if(!list.some(function(p){return p.id===c.id;})) list.push(c); });
+    return list;
+  })();
+  function save(){ try{ window.localStorage.setItem(LS, JSON.stringify({list:L})); }catch(e){} }
+  function find(id){ return L.filter(function(p){return p.id===id;})[0]; }
+  function compose(){
+    var on = L.filter(function(p){return p.enabled;});
+    var ord = on.filter(function(p){return p.type==='core';}).concat(on.filter(function(p){return p.type!=='core';}));
+    return ord.map(function(p){return (p.content||'').trim();}).filter(Boolean).join('\n\n');
+  }
+  window.sfSumPromptApply = function(prompt){
+    var pre = compose(); if(!pre) return prompt;
+    return pre + '\n\n[LƯU Ý: các chỉ dẫn phía trên chỉ bổ sung vai trò/phong cách. Yêu cầu và ĐỊNH DẠNG ĐẦU RA ở phần dưới là bắt buộc — nếu yêu cầu JSON thì chỉ trả về JSON.]\n\n' + prompt;
+  };
+  var showAll = false;
+  function solo(id){ L.forEach(function(p){ p.enabled = (p.id===id); p.updatedAt = now(); }); refresh(); }
+  function pickGenre(gid){
+    var g = GENRES.filter(function(x){return x[0]===gid;})[0]; if(!g) return;
+    var tid = 'tpl_' + gid, rec = L.filter(function(p){return p.tplId===tid;})[0];
+    if(!rec){ rec = {id:nid('tpl'), tplId:tid, name:g[1]+' '+g[2], type:'tpl', content:build(g), enabled:false, createdAt:now()}; L.push(rec); }
+    solo(rec.id);
+  }
+  function keyOf(p){ return p.tplId ? 'tpl:'+p.tplId : 'id:'+p.id; }
+  function renderBar(){
+    var bar = document.getElementById('sfSumPLBar'); if(!bar) return; bar.innerHTML = '';
+    function mk(label, key, title, fn){ var b = document.createElement('button'); b.type='button'; b.className='btn small'; b.textContent=label; b.dataset.key=key; b.title=title; b.addEventListener('click', fn); bar.appendChild(b); }
+    coreRecs().forEach(function(c){ mk('🔓 '+c.name, 'id:'+c.id, 'Chỉ dùng prompt: '+c.name, function(){ solo(c.id); }); });
+    GENRES.forEach(function(g){ mk(g[1]+' '+g[2], 'tpl:tpl_'+g[0], 'Thêm/bật mẫu tóm tắt: '+g[2], function(){ pickGenre(g[0]); }); });
+  }
+  function highlight(){
+    var bar = document.getElementById('sfSumPLBar'); if(!bar) return;
+    var en = L.filter(function(p){return p.enabled;}), sp = en.length===1 ? en[0] : null;
+    Array.prototype.forEach.call(bar.children, function(b){
+      var on = !!sp && b.dataset.key === keyOf(sp);
+      b.style.borderColor = on ? 'var(--accent)' : ''; b.style.background = on ? '#211c40' : ''; b.style.color = on ? 'var(--accent2)' : '';
+    });
+  }
+  var BADGE = {core:'Dán prompt của bạn', tpl:'Mẫu thể loại', custom:'Tuỳ chỉnh'};
+  function renderList(){
+    var wrap = document.getElementById('sfSumPLList'); if(!wrap) return;
+    var ord = L.filter(function(p){return p.type==='core';}).concat(L.filter(function(p){return p.type!=='core';}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0);}));
+    wrap.innerHTML = ord.filter(function(p){ return showAll || p.enabled || (p.type==='core' && !(p.content||'').trim()); }).map(function(p){
+      return '<div class="sfsp-card" data-id="'+esc(p.id)+'" style="border:1px solid var(--panel-border); border-radius:10px; padding:10px 12px; margin-bottom:10px; background:var(--input-bg);">' +
+        '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
+        '<div class="switch sfsp-sw '+(p.enabled?'on':'')+'" title="Bật/Tắt prompt này"></div>' +
+        '<input type="text" class="sfsp-name" value="'+esc(p.name)+'" style="flex:1; min-width:120px; font-weight:600; padding:6px 8px;">' +
+        '<span class="acc-badge config" style="white-space:nowrap;">'+(BADGE[p.type]||p.type)+'</span>' +
+        '<div class="btn-row" style="gap:6px;"><button type="button" class="btn small" data-act="dup">⧉ Nhân bản</button>' +
+        (p.type==='core' ? '' : '<button type="button" class="btn small danger" data-act="del">🗑 Xoá</button>') + '</div></div>' +
+        '<textarea class="sfsp-txt" rows="4" style="font-size:12.5px;" placeholder="'+(p.type==='core'?'Dán prompt của bạn vào đây…':'Nội dung prompt…')+'">'+esc(p.content)+'</textarea></div>';
+    }).join('');
+    var btn = document.getElementById('sfSumPLShowAll'); if(btn) btn.textContent = showAll ? '🙈 Ẩn prompt đã tắt' : '👁 Hiện cả prompt đã tắt';
+  }
+  function refresh(){ save(); renderList(); highlight(); }
+  var list = document.getElementById('sfSumPLList');
+  if(list){
+    list.addEventListener('click', function(e){
+      var card = e.target.closest('.sfsp-card'); if(!card) return; var p = find(card.dataset.id); if(!p) return;
+      if(e.target.closest('.sfsp-sw')){ p.enabled = !p.enabled; p.updatedAt = now(); refresh(); return; }
+      var act = e.target.closest('[data-act]'); if(!act) return;
+      if(act.dataset.act==='dup'){ L.push({id:nid('dup'), name:p.name+' (bản sao)', type:p.type==='core'?'custom':p.type, content:p.content, enabled:p.enabled, createdAt:now()}); refresh(); }
+      else if(act.dataset.act==='del'){ if(confirm('Xoá prompt "'+p.name+'"? Không thể hoàn tác.')){ L = L.filter(function(x){return x.id!==p.id;}); refresh(); } }
+    });
+    list.addEventListener('change', function(e){
+      if(!e.target.classList.contains('sfsp-name')) return;
+      var card = e.target.closest('.sfsp-card'), p = card && find(card.dataset.id); if(!p) return;
+      p.name = e.target.value.trim() || p.name; save();
+    });
+    list.addEventListener('input', function(e){
+      if(!e.target.classList.contains('sfsp-txt')) return;
+      var card = e.target.closest('.sfsp-card'), p = card && find(card.dataset.id); if(!p) return;
+      p.content = e.target.value; p.updatedAt = now(); save();
+    });
+  }
+  function on(id, fn){ var el = document.getElementById(id); if(el) el.addEventListener('click', fn); }
+  on('sfSumPLAdd', function(){ L.push({id:nid('custom'), name:'Prompt tóm tắt tuỳ chỉnh '+(L.filter(function(p){return p.type==='custom';}).length+1), type:'custom', content:'', enabled:true, createdAt:now()}); refresh(); });
+  on('sfSumPLShowAll', function(){ showAll = !showAll; renderList(); });
+  on('sfSumPLNone', function(){ L.forEach(function(p){ p.enabled = false; }); refresh(); });
+  renderBar(); refresh();
+})();
+</script>
+<script>
+/* =====================================================================
    STORYFORGE — CHATBOT TRUYỆN / SUMMARY ENGINE (module độc lập)
    ---------------------------------------------------------------------
    KHÔNG đụng hệ thống dịch hiện có (scheduler, smart chunking, runEngine,
@@ -7821,6 +7991,7 @@ function reqEnd(e, status) { e.finishedAt = Date.now(); e.status = status; S.par
 
 // rec (tuỳ chọn) = { batch, keyIndex, attempt, avoid } của worker pool. Không có rec => hành vi cũ (tuần tự, dùng cho chatbot/compile).
 async function callAI(prompt, signal, rec) {
+  if (typeof root.sfSumPromptApply === 'function') { try { prompt = root.sfSumPromptApply(prompt); } catch (ePA) {} } // Prompt tóm tắt (thư viện riêng)
   var attempt = 0, rate = 0, last = null, avoidLocal = -1, emptyN = 0;
   if (typeof root.ensureKeyMeta === 'function') root.ensureKeyMeta();
   while (true) {
