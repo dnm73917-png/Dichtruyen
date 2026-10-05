@@ -952,6 +952,8 @@
         <label>Context Memory (ký tự) <input type="number" id="sfSumCtxChars" min="3000" max="60000" step="1000" value="14000"></label>
         <label class="sfsum-wide" title="Tuỳ chọn. Chỉ dùng khi tiêu đề chương trong file không được nhận ra tự động. Regex, không phân biệt hoa/thường; nhóm bắt (…) đầu tiên là số chương. Mỗi mẫu tạo một phiên đọc riêng.">Mẫu tiêu đề chương (regex, tuỳ chọn) <input type="text" id="sfSumChapRe" placeholder="vd: ^\s*Chương\s+(\d+)" autocomplete="off" spellcheck="false"></label>
         <label title="Trần số request summary chạy đồng thời. Thực tế = min(số key khả dụng, giá trị này, số key còn RPM)">Parallel Summary <input type="number" id="sfSumParallel" min="1" max="20" step="1" value="7"></label>
+        <label title="Khi hỏi, AI đọc thêm NGUYÊN VĂN các chương liên quan (theo số chương trong câu hỏi hoặc theo tên/từ khoá) thay vì chỉ dựa vào tóm tắt">📖 Đọc nguyên văn khi trả lời <input type="checkbox" id="sfSumReadSrc" checked></label>
+        <label title="Số ký tự nguyên văn tối đa gửi kèm mỗi câu hỏi (càng nhiều càng chính xác nhưng tốn token)">Nguyên văn tối đa (ký tự) <input type="number" id="sfSumSrcChars" min="0" max="120000" step="2000" value="24000"></label>
       </div>
       <div class="btn-row">
         <button class="btn primary" id="sfSumStartBtn" disabled>▶ Bắt đầu đọc</button>
@@ -8415,6 +8417,40 @@ function sfSumIntent(q) {
   return 'qa';
 }
 function chapterNos() { return S.plan.chapters.map(function (c) { return c.no; }); }
+var SRC_STOP = /^(của|và|là|có|không|những|các|một|được|cho|với|này|đó|thì|như|nào|gì|ai|sao|bao|nhiêu|về|trong|khi|nhất|hay|vậy|thế|đã|đang|sẽ|tôi|mình|bạn|hãy|biết|nói|kể|cần|muốn|từ|đến|tới|để|mà|cũng|rất|lại|nữa|chương|truyện)$/i;
+function sfSumSrcTerms(q) {
+  var terms = new Set(), nq = norm(q);
+  S.mem.characters.forEach(function (c) { [c.name].concat(c.aliases || []).forEach(function (n) { n = String(n || '').trim(); if (n.length >= 2 && nq.indexOf(norm(n)) >= 0) terms.add(n); }); });
+  var words = String(q).replace(/[“”"'(),.?!:;…]/g, ' ').split(/\s+/).filter(function (w) { return w.length >= 3 && !SRC_STOP.test(w); });
+  for (var i = 0; i + 1 < words.length; i++) terms.add(words[i] + ' ' + words[i + 1]);
+  words.forEach(function (w) { terms.add(w); });
+  return Array.from(terms).slice(0, 14);
+}
+/* Chọn chương liên quan (theo số chương trong câu hỏi, hoặc chấm điểm theo tên/từ khoá trên toàn văn) rồi lấy nguyên văn trong ngân sách ký tự */
+function sfSumReadSource(q, rg, readTo, budget) {
+  if (!S.plan || !S.text || budget < 500) return { text: '', chaps: [] };
+  var chs = S.plan.chapters.filter(function (c) { return c.no <= readTo; }), picked = [], terms = sfSumSrcTerms(q).map(function (t) { return t.toLowerCase(); });
+  if (rg) picked = chs.filter(function (c) { return c.no >= rg.start && c.no <= rg.end; }).slice(0, 12).map(function (c) { return { c: c, full: true }; });
+  else if (terms.length) {
+    picked = chs.map(function (c) {
+      var low = S.text.slice(c.start, c.end).toLowerCase(), n = 0;
+      terms.forEach(function (t) { var p = 0, k = 0; while (k < 30 && (p = low.indexOf(t, p)) >= 0) { n += t.length > 4 ? 2 : 1; k++; p += t.length; } });
+      return { c: c, n: n };
+    }).filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 5).sort(function (a, b) { return a.c.no - b.c.no; }).map(function (x) { return { c: x.c, full: false }; });
+  }
+  if (!picked.length) return { text: '', chaps: [] };
+  var per = Math.max(800, Math.floor(budget / picked.length)), out = [], chaps = [];
+  picked.forEach(function (it) {
+    var raw = S.text.slice(it.c.start, it.c.end), body;
+    if (it.full || raw.length <= per) body = raw.slice(0, per);
+    else {
+      var keep = [], len = 0; raw.split(/\n+/).forEach(function (pg) { var l = pg.toLowerCase(); if (len < per && terms.some(function (t) { return l.indexOf(t) >= 0; })) { keep.push(pg); len += pg.length + 1; } });
+      body = keep.join('\n').slice(0, per);
+    }
+    if (body.trim()) { chaps.push(it.c.no); out.push('--- Chương ' + it.c.no + ' ---\n' + body); }
+  });
+  return { text: out.join('\n\n'), chaps: chaps };
+}
 async function callText(prompt) { var r = await callAI(prompt, (S.ac || (S.ac = new AbortController())).signal); return r.content; }
 
 async function mapPool(arr, limit, fn) { // chạy fn(item, index) với tối đa `limit` việc đồng thời, kết quả theo đúng index
@@ -8498,7 +8534,13 @@ async function sfSumAsk(question, hooks) {
     var ch = S.plan.chapters.filter(function (c) { return c.no === rg.start; })[0];
     if (ch) srcSnippet = '\n\n[VĂN BẢN NGUỒN CHƯƠNG ' + ch.no + ' (cắt ≤ 8000 ký tự)]\n' + S.text.slice(ch.start, Math.min(ch.end, ch.start + 8000));
   }
-  var prompt = CHAT_SYS + '\n\n[STORY MEMORY]\n' + ctx + '\n\n[TÓM TẮT CHƯƠNG LIÊN QUAN]\n' + JSON.stringify(chosen) + srcSnippet + '\n\n[CÂU HỎI]\n' + question;
+  var srcNote = '', useSrc = true, srcBudget = 24000;
+  try { var cbS = document.getElementById('sfSumReadSrc'), nbS = document.getElementById('sfSumSrcChars'); if (cbS) useSrc = cbS.checked; if (nbS) { var vS = parseInt(nbS.value, 10); if (Number.isFinite(vS)) srcBudget = Math.max(0, Math.min(120000, vS)); } } catch (eS) {}
+  if (useSrc) {
+    var rsS = sfSumReadSource(question, rg, readTo, srcBudget);
+    if (rsS.text) { srcSnippet = '\n\n[NGUYÊN VĂN CÁC CHƯƠNG LIÊN QUAN: ' + rsS.chaps.join(', ') + ']\n' + rsS.text; srcNote = '\nLƯU Ý: có thêm [NGUYÊN VĂN CÁC CHƯƠNG LIÊN QUAN] — hãy đọc và ưu tiên nguyên văn khi trả lời, đối chiếu với Memory, luôn dẫn số chương. Nếu nguyên văn đã nạp không nêu thì nói rõ “các chương đã nạp chưa nêu”, không bịa.'; }
+  }
+  var prompt = CHAT_SYS + srcNote + '\n\n[STORY MEMORY]\n' + ctx + '\n\n[TÓM TẮT CHƯƠNG LIÊN QUAN]\n' + JSON.stringify(chosen) + srcSnippet + '\n\n[CÂU HỎI]\n' + question;
   return { text: await callText(prompt) };
 }
 
